@@ -37,9 +37,17 @@ reviews:
     - path: "**/*.md"
       instructions: "Ensure documentation follows academic standards and is clear for collaborative research."
     - path: "**/pyproject.toml"
-      instructions: "Check Poetry configuration, dependency management, and tool configurations (black, ruff, pytest)."
+      instructions: "Check Poetry configuration, dependency management, and tool configurations (black, ruff, pytest). Enforce pinned/explicitly constrained dependency versions, require poetry.lock presence, and recommend automated dependency updates via Dependabot/Renovate."
     - path: "**/deno.json"
       instructions: "Verify Deno task configurations and import maps."
+    - path: "**/package.json"
+      instructions: "Enforce pinned/explicitly constrained dependency versions, require lockfile presence (package-lock.json/yarn.lock), and recommend automated dependency updates via Dependabot/Renovate."
+    - path: "**/deno.lock"
+      instructions: "Verify lockfile is present and up-to-date, recommend regenerating via 'deno cache' in CI."
+    - path: "**/poetry.lock"
+      instructions: "Verify lockfile is present and up-to-date, recommend regenerating via 'poetry lock' in CI."
+    - path: "**/.github/workflows/**"
+      instructions: "Ensure CI includes dependency update commands and lockfile regeneration steps for reproducible builds."
   abort_on_close: true
   disable_cache: false
   auto_review:

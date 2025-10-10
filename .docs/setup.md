@@ -8,7 +8,7 @@ npm run update-all
 
 > Tip: Rerun `npm run update-all` after changing backend or frontend dependencies.
 
-### Linting & Formatting Quick Reference
+## Linting & Formatting Quick Reference
 
 - **All services**: `npm run lint` / `npm run format`
 
@@ -80,12 +80,16 @@ For broader guidance on naming patterns and lint rules, see [`./coding-conventio
 
 ## Backend (Python + Poetry)
 
-1. Install Poetry: follow https://python-poetry.org/docs/#installation
+1. Install Poetry: follow <https://python-poetry.org/docs/#installation>
+
 2. Enable virtualenvs in-project (optional, consistent across machines):
+
    ```bash
    poetry config virtualenvs.in-project true
    ```
+
 3. Bootstrap services:
+
    ```bash
    cd backend/api
    poetry install --no-root
@@ -94,7 +98,9 @@ For broader guidance on naming patterns and lint rules, see [`./coding-conventio
    cd ../eval
    poetry install --no-root
    ```
+
 4. Activate an env when working on a component:
+
    ```bash
    cd backend/api
    poetry shell
@@ -102,8 +108,10 @@ For broader guidance on naming patterns and lint rules, see [`./coding-conventio
 
 ## Frontend (Deno)
 
-1. Install Deno: follow https://docs.deno.com/runtime/getting_started/installation/
-2. Install frontend placeholder dependency:
+1. Install Deno: follow <https://docs.deno.com/runtime/getting_started/installation/>
+
+2. Validate frontend tooling:
+
    ```bash
    cd frontend
    deno install
