@@ -21,8 +21,8 @@ missing_keys=()
 copy_env_if_missing() {
   local template_path="$1"
   local env_path="$2"
-  local rel_env_path="${env_path#${ROOT_DIR}/}"
-  local rel_template_path="${template_path#${ROOT_DIR}/}"
+  local rel_env_path="${env_path#"${ROOT_DIR}/"}"
+  local rel_template_path="${template_path#"${ROOT_DIR}/"}"
 
   if [ -f "${template_path}" ]; then
     if [ ! -f "${env_path}" ]; then
@@ -40,7 +40,7 @@ copy_env_if_missing() {
 check_env_keys() {
   local template_path="$1"
   local env_path="$2"
-  local rel_env_path="${env_path#${ROOT_DIR}/}"
+  local rel_env_path="${env_path#"${ROOT_DIR}/"}"
 
   if [ ! -f "${template_path}" ] || [ ! -f "${env_path}" ]; then
     return
