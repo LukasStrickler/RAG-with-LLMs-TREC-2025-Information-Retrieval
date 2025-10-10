@@ -31,10 +31,10 @@
 
 - Poetry (<https://python-poetry.org/docs/#installation>)
 - Deno runtime (<https://docs.deno.com/runtime/getting_started/installation/>)
-- Access to project environment variables (`backend/.env`, `frontend/.env`)
+- Access to project environment variables (`backend/api/.env`, `backend/embeddings/.env`, `backend/eval/.env`, `frontend/.env`)
 
 ### Quickstart
-1. Copy environment templates: `cp backend/.env.example backend/.env` and `cp frontend/.env.example frontend/.env`.
+1. Copy environment templates: `cp backend/api/.env.example backend/api/.env`, `cp backend/embeddings/.env.example backend/embeddings/.env`, `cp backend/eval/.env.example backend/eval/.env`, and `cp frontend/.env.example frontend/.env`.
 2. Install backend environments:
 
    ```bash
