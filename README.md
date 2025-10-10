@@ -26,26 +26,30 @@
 ```
 
 ## Getting Started
+
 ### Prerequisites
-- Poetry (https://python-poetry.org/docs/#installation)
-- Deno runtime (https://docs.deno.com/runtime/getting_started/installation/)
+
+- Poetry (<https://python-poetry.org/docs/#installation>)
+- Deno runtime (<https://docs.deno.com/runtime/getting_started/installation/>)
 - Access to project environment variables (`backend/.env`, `frontend/.env`)
 
 ### Quickstart
 1. Copy environment templates: `cp backend/.env.example backend/.env` and `cp frontend/.env.example frontend/.env`.
 2. Install backend environments:
+
    ```bash
    cd backend/api && poetry install
    cd ../embeddings && poetry install
    cd ../eval && poetry install
    ```
+
 3. Install frontend dependencies:
+
    ```bash
    cd frontend
    deno install
    ```
 4. For detailed instructions, refer to [`.docs/setup.md`](.docs/setup.md).
-
 
 ## Team
 - Lean Fürst — [lean.henriques.fuerst@students.uni-mannheim.de](mailto:lean.henriques.fuerst@students.uni-mannheim.de)
