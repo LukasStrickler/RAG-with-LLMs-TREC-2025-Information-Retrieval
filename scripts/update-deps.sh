@@ -50,7 +50,7 @@ check_env_keys() {
     if [ -z "${key}" ]; then
       continue
     fi
-    if ! grep -q "^${key}=" "${env_path}"; then
+    if ! grep -q "^${key}[[:space:]]*=[[:space:]]*" "${env_path}"; then
       missing_keys+=("${rel_env_path}:${key}")
     fi
   done < <(grep -E '^[A-Z0-9_]+=' "${template_path}" | sed 's/[[:space:]]//g')
