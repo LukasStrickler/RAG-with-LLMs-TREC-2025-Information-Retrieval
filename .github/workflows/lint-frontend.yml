@@ -28,6 +28,16 @@ jobs:
         with:
           deno-version: ${{ matrix.deno-version }}
 
+      - name: Cache Deno dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/deno
+            ~/.deno
+          key: ${{ runner.os }}-deno-${{ matrix.deno-version }}-${{ hashFiles('frontend/deno.json', 'frontend/deno.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-deno-${{ matrix.deno-version }}-
+
       - name: Run lint
         working-directory: frontend
         run: deno task lint

@@ -15,11 +15,10 @@ on:
       - ".github/workflows/lint-backend.yml"
 
 jobs:
-  lint:
+  lint-api:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [api, embeddings, eval]
         python-version: ["3.10", "3.11"]
 
     steps:
@@ -31,21 +30,116 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v4
+        with:
+          path: backend/api/.venv
+          key: ${{ runner.os }}-api-${{ matrix.python-version }}-${{ hashFiles('backend/api/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-api-${{ matrix.python-version }}-
+            ${{ runner.os }}-api-
+
       - name: Install Poetry
         uses: abatilo/actions-poetry@v2
         with:
           poetry-version: "1.8.3"
 
       - name: Install dependencies
-        working-directory: backend/${{ matrix.service }}
+        working-directory: backend/api
         run: |
           poetry config virtualenvs.in-project true
           poetry install --no-interaction --no-root
 
       - name: Ruff lint
-        working-directory: backend/${{ matrix.service }}
+        working-directory: backend/api
         run: poetry run ruff check .
 
       - name: Black format check
-        working-directory: backend/${{ matrix.service }}
+        working-directory: backend/api
+        run: poetry run black --check .
+
+  lint-embeddings:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v4
+        with:
+          path: backend/embeddings/.venv
+          key: ${{ runner.os }}-embeddings-${{ matrix.python-version }}-${{ hashFiles('backend/embeddings/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-embeddings-${{ matrix.python-version }}-
+            ${{ runner.os }}-embeddings-
+
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v2
+        with:
+          poetry-version: "1.8.3"
+
+      - name: Install dependencies
+        working-directory: backend/embeddings
+        run: |
+          poetry config virtualenvs.in-project true
+          poetry install --no-interaction --no-root
+
+      - name: Ruff lint
+        working-directory: backend/embeddings
+        run: poetry run ruff check .
+
+      - name: Black format check
+        working-directory: backend/embeddings
+        run: poetry run black --check .
+
+  lint-eval:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v4
+        with:
+          path: backend/eval/.venv
+          key: ${{ runner.os }}-eval-${{ matrix.python-version }}-${{ hashFiles('backend/eval/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-eval-${{ matrix.python-version }}-
+            ${{ runner.os }}-eval-
+
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v2
+        with:
+          poetry-version: "1.8.3"
+
+      - name: Install dependencies
+        working-directory: backend/eval
+        run: |
+          poetry config virtualenvs.in-project true
+          poetry install --no-interaction --no-root
+
+      - name: Ruff lint
+        working-directory: backend/eval
+        run: poetry run ruff check .
+
+      - name: Black format check
+        working-directory: backend/eval
         run: poetry run black --check .
