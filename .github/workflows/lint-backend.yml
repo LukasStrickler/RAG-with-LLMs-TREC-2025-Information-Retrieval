@@ -1,18 +1,19 @@
 name: Backend Lint
 
 on:
-  push:
-    paths:
-      - "backend/**"
-      - "scripts/update-deps.sh"
-      - "package.json"
-      - ".github/workflows/lint-backend.yml"
   pull_request:
     paths:
       - "backend/**"
       - "scripts/update-deps.sh"
       - "package.json"
       - ".github/workflows/lint-backend.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint-api:

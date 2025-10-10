@@ -1,16 +1,18 @@
 name: Frontend Lint
 
 on:
-  push:
-    paths:
-      - "frontend/**"
-      - "package.json"
-      - ".github/workflows/lint-frontend.yml"
   pull_request:
     paths:
       - "frontend/**"
       - "package.json"
       - ".github/workflows/lint-frontend.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint:
@@ -37,6 +39,10 @@ jobs:
           key: ${{ runner.os }}-deno-${{ matrix.deno-version }}-${{ hashFiles('frontend/deno.json', 'frontend/deno.lock') }}
           restore-keys: |
             ${{ runner.os }}-deno-${{ matrix.deno-version }}-
+
+      - name: Run type check
+        working-directory: frontend
+        run: deno check .
 
       - name: Run lint
         working-directory: frontend
