@@ -35,4 +35,3 @@ jobs:
       - name: Run fmt check
         working-directory: frontend
         run: deno fmt --check
-

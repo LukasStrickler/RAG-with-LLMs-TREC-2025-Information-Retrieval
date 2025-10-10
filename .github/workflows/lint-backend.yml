@@ -49,4 +49,3 @@ jobs:
       - name: Black format check
         working-directory: backend/${{ matrix.service }}
         run: poetry run black --check .
-
