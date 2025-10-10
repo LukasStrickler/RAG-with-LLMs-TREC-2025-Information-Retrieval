@@ -14,7 +14,8 @@
     "lint:frontend": "cd frontend && deno task lint",
     "format:frontend": "cd frontend && deno task fmt",
     "lint": "npm run lint:backend && npm run lint:frontend",
-    "format": "npm run format:backend && npm run format:frontend"
+    "format": "npm run format:backend && npm run format:frontend",
+    "review": "mkdir -p .review && coderabbit --base main --prompt-only > .review/coderabbit_review_$(date +%Y%m%d_%H%M%S).txt"
   }
 }
 

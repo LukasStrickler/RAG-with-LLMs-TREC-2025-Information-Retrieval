@@ -11,14 +11,63 @@ npm run update-all
 ### Linting & Formatting Quick Reference
 
 - **All services**: `npm run lint` / `npm run format`
+
 - Backend services
   - Lint: `npm run lint:backend` (or per service `npm run lint:backend:api`, etc.)
   - Format: `npm run format:backend`
   - Tools: `ruff`, `black` (via `poetry run`)
+
 - Frontend
   - Lint: `npm run lint:frontend`
   - Format: `npm run format:frontend`
   - Tools: `deno lint`, `deno fmt`
+
+### Code Review
+
+- **CodeRabbit review**: `npm run review`
+  - Reviews current branch changes against `main`
+  - Outputs AI-powered review to `.review/coderabbit_review_YYYYMMDD_HHMMSS.txt`
+  - Creates timestamped files to preserve review history
+  - Requires CodeRabbit CLI (<https://docs.coderabbit.ai/cli/overview>): `curl -fsSL https://cli.coderabbit.ai/install.sh | sh`
+
+#### CodeRabbit CLI Setup
+
+1. **Install CodeRabbit CLI**:
+
+   ```bash
+   curl -fsSL https://cli.coderabbit.ai/install.sh | sh
+   ```
+
+2. **Restart your shell** to make the CLI available:
+
+   ```bash
+   # For zsh (default on macOS)
+   source ~/.zshrc
+   
+   # For bash
+   source ~/.bashrc
+   ```
+
+3. **Authenticate with CodeRabbit**:
+
+   ```bash
+   coderabbit auth login
+   ```
+
+   - Follow the prompts to complete authentication
+   - You'll need a CodeRabbit account (free tier available)
+
+4. **Verify installation**:
+
+   ```bash
+   coderabbit --version
+   ```
+
+5. **Run your first review**:
+
+   ```bash
+   npm run review
+   ```
 
 ### Environment Files
 

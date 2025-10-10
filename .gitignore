@@ -11,3 +11,6 @@ frontend/.env
 backend/api/.env
 backend/embeddings/.env
 backend/eval/.env
+
+# CodeRabbit review output
+.review/

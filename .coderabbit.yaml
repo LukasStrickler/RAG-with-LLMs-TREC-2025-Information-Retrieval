@@ -79,6 +79,8 @@ tools:
   ruff:
     enabled: true
     # Align with project's ruff config: E, F, B, I, UP, SIM rules
+    # E: pycodestyle errors, F: pyflakes, B: bugbear, I: isort, UP: typing/unused-parameter rules, SIM: simplification rules
+    # See pyproject.toml for full configuration
   markdownlint:
     enabled: true
   github-checks:
