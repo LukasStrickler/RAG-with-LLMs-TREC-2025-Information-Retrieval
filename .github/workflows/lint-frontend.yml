@@ -1,0 +1,38 @@
+name: Frontend Lint
+
+on:
+  push:
+    paths:
+      - "frontend/**"
+      - "package.json"
+      - ".github/workflows/lint-frontend.yml"
+  pull_request:
+    paths:
+      - "frontend/**"
+      - "package.json"
+      - ".github/workflows/lint-frontend.yml"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        deno-version: ["v2.5.4"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: ${{ matrix.deno-version }}
+
+      - name: Run lint
+        working-directory: frontend
+        run: deno task lint
+
+      - name: Run fmt check
+        working-directory: frontend
+        run: deno fmt --check
+

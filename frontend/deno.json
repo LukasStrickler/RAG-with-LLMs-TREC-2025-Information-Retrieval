@@ -1,0 +1,11 @@
+{
+  "tasks": {
+    "fmt": "deno fmt",
+    "lint": "deno lint",
+    "fix": "deno lint --fix"
+  },
+  "imports": {
+    "next": "npm:next@15.5.4"
+  },
+  "nodeModulesDir": "auto"
+}

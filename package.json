@@ -1,0 +1,20 @@
+{
+  "name": "rag-with-llms-trec-2025-information-retrieval",
+  "private": true,
+  "scripts": {
+    "update-all": "bash scripts/update-deps.sh",
+    "lint:backend:api": "cd backend/api && poetry run ruff check . && poetry run black --check .",
+    "lint:backend:embeddings": "cd backend/embeddings && poetry run ruff check . && poetry run black --check .",
+    "lint:backend:eval": "cd backend/eval && poetry run ruff check . && poetry run black --check .",
+    "lint:backend": "npm run lint:backend:api && npm run lint:backend:embeddings && npm run lint:backend:eval",
+    "format:backend:api": "cd backend/api && poetry run black .",
+    "format:backend:embeddings": "cd backend/embeddings && poetry run black .",
+    "format:backend:eval": "cd backend/eval && poetry run black .",
+    "format:backend": "npm run format:backend:api && npm run format:backend:embeddings && npm run format:backend:eval",
+    "lint:frontend": "cd frontend && deno task lint",
+    "format:frontend": "cd frontend && deno task fmt",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "format": "npm run format:backend && npm run format:frontend"
+  }
+}
+

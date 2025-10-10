@@ -1,0 +1,13 @@
+# Python virtual environments
+backend/**/.venv/
+# Keep env examples under version control
+!backend/**/.env.example
+!frontend/.env.example
+
+# Node dependencies
+node_modules/
+.env
+frontend/.env
+backend/api/.env
+backend/embeddings/.env
+backend/eval/.env
