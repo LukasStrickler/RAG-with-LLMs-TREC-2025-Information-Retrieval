@@ -1,0 +1,218 @@
+language: en-US
+tone_instructions: 'Focus on academic research project standards, emphasize reproducibility and maintainability for collaborative development'
+early_access: true
+enable_free_tier: true
+
+reviews:
+  profile: assertive
+  request_changes_workflow: false
+  high_level_summary: true
+  high_level_summary_placeholder: '@coderabbitai summary'
+  high_level_summary_in_walkthrough: false
+  auto_title_placeholder: '@coderabbitai'
+  auto_title_instructions: 'Use conventional commit format: <type>(<scope>): <description>'
+  review_status: true
+  commit_status: true
+  fail_commit_status: false
+  collapse_walkthrough: false
+  changed_files_summary: true
+  sequence_diagrams: true
+  estimate_code_review_effort: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  suggested_labels: true
+  auto_apply_labels: false
+  suggested_reviewers: true
+  auto_assign_reviewers: false
+  in_progress_fortune: true
+  poem: true
+  labeling_instructions: []
+  path_filters: []
+  path_instructions: 
+    - path: "backend/**"
+      instructions: "Focus on Python best practices, FastAPI patterns, and LangChain/LangGraph integrations. Ensure proper error handling and type hints."
+    - path: "frontend/**"
+      instructions: "Focus on Deno/Next.js best practices, ES modules, and proper environment variable usage with NEXT_PUBLIC_ prefix."
+    - path: "**/*.md"
+      instructions: "Ensure documentation follows academic standards and is clear for collaborative research."
+    - path: "**/pyproject.toml"
+      instructions: "Check Poetry configuration, dependency management, and tool configurations (black, ruff, pytest). Enforce pinned/explicitly constrained dependency versions, require poetry.lock presence, and recommend automated dependency updates via Dependabot/Renovate."
+    - path: "**/deno.json"
+      instructions: "Verify Deno task configurations and import maps."
+    - path: "**/package.json"
+      instructions: "Enforce pinned/explicitly constrained dependency versions, require lockfile presence (package-lock.json/yarn.lock), and recommend automated dependency updates via Dependabot/Renovate."
+    - path: "**/deno.lock"
+      instructions: "Verify lockfile is present and up-to-date, recommend regenerating via 'deno cache' in CI."
+    - path: "**/poetry.lock"
+      instructions: "Verify lockfile is present and up-to-date, recommend regenerating via 'poetry lock' in CI."
+    - path: "**/.github/workflows/**"
+      instructions: "Ensure CI includes dependency update commands and lockfile regeneration steps for reproducible builds."
+  abort_on_close: true
+  disable_cache: false
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    ignore_title_keywords: []
+    labels: []
+    drafts: false
+    base_branches: []
+    ignore_usernames: []
+  finishing_touches:
+    docstrings:
+      enabled: true
+    unit_tests:
+      enabled: true
+  pre_merge_checks:
+    docstrings:
+      mode: warning
+      threshold: 80
+    title:
+      mode: warning
+      requirements: 'Use conventional commit format: <type>(<scope>): <description>'
+    description:
+      mode: warning
+    issue_assessment:
+      mode: warning
+    custom_checks: []
+
+tools:
+  ast-grep:
+    rule_dirs: []
+    util_dirs: []
+    essential_rules: true
+    packages: []
+  shellcheck:
+    enabled: true
+  ruff:
+    enabled: true
+    # Align with project's ruff config: E, F, B, I, UP, SIM rules
+    # E: pycodestyle errors, F: pyflakes, B: bugbear, I: isort, UP: typing/unused-parameter rules, SIM: simplification rules
+    # See pyproject.toml for full configuration
+  markdownlint:
+    enabled: true
+  github-checks:
+    enabled: true
+    timeout_ms: 90000
+  languagetool:
+    enabled: true
+    enabled_rules: []
+    disabled_rules: []
+    enabled_categories: []
+    disabled_categories: []
+    enabled_only: false
+    level: default
+  biome:
+    enabled: true
+  hadolint:
+    enabled: false  # No Docker files in project
+  swiftlint:
+    enabled: false  # No Swift code
+  phpstan:
+    enabled: false  # No PHP code
+  phpmd:
+    enabled: false  # No PHP code
+  phpcs:
+    enabled: false  # No PHP code
+  golangci-lint:
+    enabled: false  # No Go code
+  yamllint:
+    enabled: true
+  gitleaks:
+    enabled: true
+  checkov:
+    enabled: false  # No infrastructure code
+  detekt:
+    enabled: false  # No Kotlin code
+  eslint:
+    enabled: true
+  flake8:
+    enabled: false  # Using ruff instead
+  rubocop:
+    enabled: false  # No Ruby code
+  buf:
+    enabled: false  # No Protocol Buffers
+  regal:
+    enabled: false  # No Rego policies
+  actionlint:
+    enabled: true
+  pmd:
+    enabled: false  # No Java code
+  cppcheck:
+    enabled: false  # No C++ code
+  semgrep:
+    enabled: true
+  circleci:
+    enabled: false  # Using GitHub Actions
+  clippy:
+    enabled: false  # No Rust code
+  sqlfluff:
+    enabled: false  # No SQL files
+  prismaLint:
+    enabled: false  # No Prisma schema
+  pylint:
+    enabled: false  # Using ruff instead
+  oxc:
+    enabled: true
+  shopifyThemeCheck:
+    enabled: false  # No Shopify themes
+  luacheck:
+    enabled: false  # No Lua code
+  brakeman:
+    enabled: false  # No Ruby code
+  dotenvLint:
+    enabled: true
+  htmlhint:
+    enabled: true
+  checkmake:
+    enabled: false  # No Makefiles
+  osvScanner:
+    enabled: true
+
+chat:
+  art: true
+  auto_reply: true
+  integrations:
+    jira:
+      usage: auto
+    linear:
+      usage: auto
+
+knowledge_base:
+  opt_out: false
+  web_search:
+    enabled: true
+  code_guidelines:
+    enabled: true
+    filePatterns: 
+      - ".docs/coding-conventions.md"
+  learnings:
+    scope: local
+  issues:
+    scope: local
+  jira:
+    usage: auto
+    project_keys: []
+  linear:
+    usage: auto
+    team_keys: []
+  pull_requests:
+    scope: local
+  mcp:
+    usage: auto
+    disabled_servers: []
+
+code_generation:
+  docstrings:
+    language: en-US
+    path_instructions: 
+      - path: "backend/**"
+        instructions: "Use Google-style docstrings for Python functions and classes. Include type hints and examples for complex functions."
+      - path: "frontend/**"
+        instructions: "Use JSDoc format for TypeScript/JavaScript functions. Include parameter types and return types."
+  unit_tests:
+    path_instructions: 
+      - path: "backend/**"
+        instructions: "Use pytest conventions. Test both happy path and edge cases. Mock external dependencies like LangChain services."
+      - path: "frontend/**"
+        instructions: "Use Deno's built-in testing framework. Test component behavior and API interactions."
