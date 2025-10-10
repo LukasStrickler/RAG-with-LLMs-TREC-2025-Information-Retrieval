@@ -83,8 +83,13 @@ if ! command -v deno >/dev/null 2>&1; then
 else
   frontend_dir="${ROOT_DIR}/frontend"
   if [ -f "${frontend_dir}/deno.json" ]; then
-    echo "[info] Installing frontend dependencies" >&2
-    (cd "${frontend_dir}" && deno install --allow-scripts=npm:sharp)
+    echo "[info] Caching frontend dependencies" >&2
+    if [ -f "${frontend_dir}/deno.lock" ]; then
+      (cd "${frontend_dir}" && deno cache --lock --allow-scripts=npm:sharp .)
+    else
+      echo "[warn] No deno.lock found, caching without lockfile" >&2
+      (cd "${frontend_dir}" && deno cache --allow-scripts=npm:sharp .)
+    fi
   else
     echo "[warn] Skipping frontend (deno.json not found)" >&2
   fi
