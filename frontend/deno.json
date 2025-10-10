@@ -1,4 +1,8 @@
 {
+  "lock": true,
+  "compilerOptions": {
+    "strict": true
+  },
   "tasks": {
     "fmt": "deno fmt",
     "lint": "deno lint",
