@@ -74,6 +74,8 @@ flowchart TD
 ### 3. Ingestion Pipeline (Chunking & Embeddings)
 - Parse/clean/chunk documents; compute embeddings per chunk.
 - Configurable chunk size, overlap, model, and batching.
+- Reproducibility: fixed random seeds for chunking/ordering; config-checked runs (commit hash + config snapshot).
+- Data lineage: track input dataset version/DOI and write a manifest (IDs, checksums, embedding model, timestamp).
 
 ### 4. Vector Database (Semantic Retrieval)
 - Stores embeddings + metadata; ANN Top‑K search for similarity.
