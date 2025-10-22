@@ -1,0 +1,87 @@
+@startuml
+title Retrieval Architecture (R Track, 2025)
+
+package "Dataset & Ingestion" {
+  [datasets sync]
+  [Chunking & Embedding Worker]
+  [IngestionManifest (JSON)]
+}
+
+package "Indexes" {
+  [Lucene/BM25 Snapshot]
+  [Vector Index Snapshot]
+  [Metadata Store]
+}
+
+package "Shared Retrieval Service" {
+  [Fusion Engine]
+  [Lexical Adapter]
+  [Vector Adapter]
+}
+
+package "FastAPI Layer" {
+  [Endpoint: /metadata]
+  [Endpoint: /retrieve]
+  [Endpoint: /retrieve/batch]
+  [Endpoint: /health]
+}
+
+package "External Tools" {
+  [trec_eval]
+}
+
+package "Clients" {
+  [Evaluation CLI]
+  [Chat UI Stub]
+}
+
+package "Artifacts" {
+  [Run TSV (top-100)]
+  [EvaluationReport.json]
+  [ExperimentManifest.jsonl]
+  [BenchmarkReport.json]
+  [BenchmarkComparison.md]
+  [metrics.yaml]
+  [Schema (JSON)]
+}
+
+[datasets sync] --> [IngestionManifest (JSON)] : write spec
+[Chunking & Embedding Worker] --> [Lucene/BM25 Snapshot]
+[Chunking & Embedding Worker] --> [Vector Index Snapshot]
+[Chunking & Embedding Worker] --> [Metadata Store]
+[IngestionManifest (JSON)] --> [Chunking & Embedding Worker] : drive refresh
+
+[Endpoint: /retrieve] --> [Lexical Adapter]
+[Endpoint: /retrieve] --> [Vector Adapter]
+[Endpoint: /retrieve/batch] --> [Lexical Adapter]
+[Endpoint: /retrieve/batch] --> [Vector Adapter]
+[Endpoint: /retrieve] --> [Fusion Engine]
+[Endpoint: /retrieve/batch] --> [Fusion Engine]
+[Endpoint: /metadata] --> [Fusion Engine]
+
+[Lexical Adapter] --> [Lucene/BM25 Snapshot] : BM25 scoring (optional SPLADE variant)
+[Vector Adapter] --> [Vector Index Snapshot] : ANN similarity search
+[Fusion Engine] --> [Metadata Store] : enrich hits
+[Fusion Engine] --> [Metadata Store] : read metadata
+
+
+[Evaluation CLI] --> [Endpoint: /retrieve/batch]
+[Chat UI Stub] --> [Endpoint: /retrieve]
+
+[Evaluation CLI] --> [trec_eval] : invoke scoring
+[trec_eval] --> [Run TSV (top-100)] : reads
+[trec_eval] --> [EvaluationReport.json] : outputs metrics
+
+[Evaluation CLI] --> [Run TSV (top-100)]
+[Evaluation CLI] --> [EvaluationReport.json]
+[Evaluation CLI] --> [ExperimentManifest.jsonl]
+[Evaluation CLI] --> [metrics.yaml]
+[Evaluation CLI] --> [Schema (JSON)]
+[Evaluation CLI] --> [BenchmarkReport.json]
+[Evaluation CLI] --> [BenchmarkComparison.md]
+
+[Schema (JSON)] --> [FastAPI Layer] : shared models
+[Schema (JSON)] --> [Evaluation CLI] : shared models
+
+@enduml
+
