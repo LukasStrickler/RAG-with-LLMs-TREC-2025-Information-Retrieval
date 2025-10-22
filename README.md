@@ -9,47 +9,57 @@
 
 ## Project Snapshot
 - Monorepo with clearly separated services for API, embeddings, evaluation, and frontend.
+- **Reproducible workflows:** Fixed random seeds, versioned configs, and data lineage tracking.
 - Backend built with FastAPI and LangChain/LangGraph integrations.
-- Embeddings ingestion via dedicated CLI workers (`poetry run embeddings-seed`).
-- Database with embeddings for retrieval.
-- Frontend prototypes powered by Deno, Next.js, shadcn/ui, and Convex.
+- **API status:** Retrieval and metadata endpoints return representative mock payloads until the metadata store and search services are wired in.
+- **Embeddings ingestion:** Planned CLI workers orchestrate chunking (seed=42, overlap=50, window=512) and vector generation, writing manifests alongside embeddings.
+- **Metadata store:** Planned Postgres schema will persist dataset specs, chunking configs, and index registry entries for the API.
+- **Keyword/BM25 index:** **[Planned - Q1]** Inverted index for term-based matching.
+- **Hybrid retrieval** (lexical + vector): **[Planned - Q1]** Weighted fusion approach.
+- Frontend: current Deno prototype; Next.js + shadcn/ui + Convex as future direction.
 
 ## Repository Layout
 ```text
-/                                  
-├─ backend/                        # Python backend 
-│  ├─ api/                         # FastAPI service + DB access layer
-│  ├─ embeddings/                  # ingestion, chunking, vectorization jobs
-│  └─ eval/                        # TREC evaluation scripts and configs
-├─ frontend/                       # Deno + Next.js application
-└─ .docs/                          # setup guides, meetings, research notes
+/                       
+├─ backend/
+│  ├─ api/            # FastAPI service (mock retrieval + metadata stubs)
+│  ├─ embeddings/     # Planned ingestion + embedding workers (Poetry project)
+│  └─ eval/           # Evaluation CLI + TREC tooling (stubbed)
+├─ frontend/          # Deno prototype (Next.js migration planned)
+├─ shared/            # Pydantic models + enums shared across services
+├─ schema/            # JSON Schemas used by pipelines and API
+├─ scripts/           # Automation (deps update, UML generation)
+└─ .docs/             # Setup guides, API docs, UML, KPIs, meeting notes
 ```
 
 ## Workflow & Data Pipeline
 
-This diagram summarizes how data flows from a small development subset into lexical/vector stores and the retrieval service. Each numbered node links to a short description below.
+This diagram summarizes how data flows from curated datasets through planned ingestion jobs into retrieval services and downstream clients. Each numbered node links to the descriptions below.
 
 ```mermaid
 %%{init: { "theme": "neutral" }}%%
+%% Note: HTML entities (#40;, #91;, #93;) are intentionally preserved for proper Mermaid rendering
 flowchart TD
-  A["(1) Dataset <br>(development subset)"]:::data --> B1["(2) Build Keyword Index"]:::script
-  B1 --> C1[("(2) Keyword Index")]:::data
-  A:::data --> B2["(3) Ingestion Pipeline <br>(chunk + embed)"]:::script
+  A["(1) Dataset<br/>(development subset)"]:::data -->|supply| B1["(2) Build Keyword Index"]:::script
+  A:::data -->|supply| B2["(3) Ingestion Pipeline"]:::script
 
-  B2 --> C2[("(4) Vector DB")]:::data
+  B1 -->|publish<br/>#40;IndexTarget#40;kind=lexical#41;#41;| C1["(4) Keyword Index"]:::data
+  B2 -->|publish<br/>#40;IndexTarget#40;kind=vector#41;#41;| C2["(5) Vector Store"]:::data
+  B2 -->|register<br/>#40;ChunkingSpec#41;| C3["(6) Metadata Store"]:::data
+  B1 -->|register<br/>#40;DatasetSpec#41;| C3["(6) Metadata Store"]:::data
+  C3 -->|serve<br/>#40;MetadataResponse#41;| D["(7) Retrieval API"]:::backend
+  D:::backend -->|search<br/>#40;RetrievalRequest -> RetrievedSegment#91;#93;#41;| C1
+  D:::backend -->|search<br/>#40;RetrievalRequest -> RetrievedSegment#91;#93;#41;| C2
 
-  D["(5) Retrieval API <br>(Top-K & hybrid)"]:::backend -->|queries| C1
-  D:::backend -->|queries| C2
-
-  E["(6) Evaluation"]:::eval -->|test queries| D
-  F["(7) Chat UI <br>(RAG)"]:::app -->|user queries| D
+  E["(8) Evaluation CLI"]:::eval -->|retrieve batch<br/>#40;RetrievalRequest -> RetrievalResponse#41;| D
+  F["(9) Chat UI (stub)"]:::app -->|retrieve<br/>#40;RetrievalRequest -> RetrievalResponse#41;| D
 
   subgraph Stores
     C1
     C2
+    C3
   end
 
-  %% Classes
   classDef data fill:#E3F2FD,stroke:#1E88E5,color:#0D47A1;
   classDef script fill:#FFF8E1,stroke:#FB8C00,color:#E65100;
   classDef backend fill:#E8F5E9,stroke:#43A047,color:#1B5E20;
@@ -61,35 +71,46 @@ flowchart TD
 | --- | --- | --- | --- | --- |
 | Blue | Orange | Green | Purple | Red |
 
-
+### Data Contracts
+All data types referenced in the diagram above are defined in [`shared/`](shared/) and documented in [`.docs/uml/classes.puml`](.docs/uml/classes.puml):
+- `DatasetSpec`, `ChunkingSpec` — dataset metadata and chunking configuration.
+- `IndexTarget` — registered index endpoints (BM25, vector, hybrid planned).
+- `MetadataResponse` — API payload bundling dataset, chunking, and index registry details.
+- `RetrievalRequest`, `RetrievalResponse`, `RetrievedSegment`, `QueryResult`, `RetrievalDiagnostics` — retrieval contracts exposed by the API.
 
 ### 1. Dataset (Development Subset)
 - Curated slice of the corpus for fast iteration and cost control.
 - Stable IDs and metadata; scales to the full set later.
 
-### 2. Keyword Index (Lexical Retrieval)
-- Inverted index (e.g., BM25) over documents for term-based matching.
-- Includes a small “(2) Build Keyword Index” job; supports hybrid with vectors.
+### 2. Build Keyword Index
+- Takes a `DatasetSpec` and produces a BM25 search index.
+- Future work: persist build manifests (commit, seed, config) and register resulting `IndexTarget`.
 
-### 3. Ingestion Pipeline (Chunking & Embeddings)
-- Parse/clean/chunk documents; compute embeddings per chunk.
-- Configurable chunk size, overlap, model, and batching.
-- Reproducibility: fixed random seeds for chunking/ordering; config-checked runs (commit hash + config snapshot).
-- Data lineage: track input dataset version/DOI and write a manifest (IDs, checksums, embedding model, timestamp).
+### 3. Ingestion Pipeline (Chunk + Embed)
+- Chunk documents, generate embeddings, and emit vector-friendly manifests.
+- Records `DatasetSpec` and `ChunkingSpec` used for the run to keep downstream pipeline reproducible.
 
-### 4. Vector Database (Semantic Retrieval)
-- Stores embeddings + metadata; ANN Top‑K search for similarity.
-- Preserves IDs for provenance and optional re‑ranking.
+### 4. Keyword Index Store
+- Holds the published BM25 index described by an `IndexTarget`.
+- Retrieval API connects via an adapter for lexical ranking.
 
-### 5. Retrieval API (Top‑K & Hybrid)
-- FastAPI endpoints for lexical, vector, and hybrid Top‑K retrieval.
-- Returns ranked results with IDs, scores, and metadata.
+### 5. Vector Store
+- Stores vectors, metadata, and ANN configuration referenced by an `IndexTarget`.
+- Enables semantic retrieval and hybrid fusion.
 
-### 6. Evaluation & Benchmarking
-- Issues test queries to the API; reports IR metrics.
-- Supports parameter sweeps; can use TREC‑compatible qrels/run files when available.
+### 6. Metadata Store
+- Planned Postgres schema storing `DatasetSpec`, `ChunkingSpec`, and index registry rows.
+- Backed API endpoints (`/api/v1/metadata`) will read from here once implemented.
 
-### 7. Chat UI (RAG Assistant)
+### 7. Retrieval API (Lexical / Vector / Hybrid)
+- FastAPI surface that will coordinate lexical/vector lookups and fuse results.
+- Currently returns mock `RetrievalResponse` payloads; integration with stores happens once the services land.
+
+### 8. Evaluation & Benchmarking
+- Issues batch `RetrievalRequest`s, compares modes, and computes metrics.
+- Targets TREC-compatible runs and integrates with `trec_eval`.
+
+### 9. Chat UI (RAG Assistant)
 - Calls the Retrieval API and composes LLM answers with retrieved context.
 - Displays sources/citations for transparency; useful for qualitative checks.
 
@@ -102,22 +123,32 @@ flowchart TD
 - Access to project environment variables (`backend/api/.env`, `backend/embeddings/.env`, `backend/eval/.env`, `frontend/.env`)
 
 ### Quickstart
-1. Copy environment templates: `cp backend/api/.env.example backend/api/.env`, `cp backend/embeddings/.env.example backend/embeddings/.env`, `cp backend/eval/.env.example backend/eval/.env`, and `cp frontend/.env.example frontend/.env`.
-2. Install backend environments:
+1. Bootstrap env files and dependencies in one step:
 
    ```bash
-   cd backend/api && poetry install
-   cd ../embeddings && poetry install
-   cd ../eval && poetry install
+   npm run update-all
    ```
 
-3. Install frontend dependencies:
+   This copies `.env.example` files, installs Poetry/Deno deps, and ensures the shared types package is editable-installed in every backend service.
+
+2. Start the API:
 
    ```bash
-   cd frontend
-   deno install
+   npm run backend:dev
    ```
-4. For detailed instructions, refer to [`.docs/setup.md`](.docs/setup.md).
+
+3. For deeper setup notes (Poetry virtualenvs, CodeRabbit, etc.), see [`.docs/setup.md`](.docs/setup.md).
+
+### Quick Reference
+
+| Command | Description |
+|---------|-------------|
+| `npm run backend:dev` | Start FastAPI server in development mode with auto-reload |
+| `npm run backend` | Start FastAPI server in production mode |
+| `npm run docs:uml` | Generate UML diagrams from shared Pydantic models |
+| `npm run update-all` | Install/update all dependencies across all services |
+| `npm run lint` | Run linting for all backend and frontend code |
+| `npm run format` | Format all backend and frontend code |
 
 ## Team
 - Lean Fürst — [lean.henriques.fuerst@students.uni-mannheim.de](mailto:lean.henriques.fuerst@students.uni-mannheim.de)
