@@ -10,15 +10,27 @@ from ..enums import MetricName
 class MetricValue(BaseModel):
     """
     Metric value with metadata for TREC-style evaluation workflows.
-    
+
     This model represents a single evaluation metric result with associated metadata
     for reproducibility and analysis. It's designed for use in evaluation pipelines,
     benchmarking, and research auditing.
-    
+
     Examples:
-        MetricValue(name=MetricName.NDCG_AT_10, value=0.65, higher_is_better=True, target=0.60, pass_flag=True)
-        MetricValue(name=MetricName.MAP_AT_100, value=0.28, higher_is_better=True, target=None, pass_flag=None)
-    
+        MetricValue(
+            name=MetricName.NDCG_AT_10,
+            value=0.65,
+            higher_is_better=True,
+            target=0.60,
+            pass_flag=True
+        )
+        MetricValue(
+            name=MetricName.MAP_AT_100,
+            value=0.28,
+            higher_is_better=True,
+            target=None,
+            pass_flag=None
+        )
+
     The model supports both per-query and per-system metrics, with the pass_flag
     indicating whether a target threshold was met (useful for automated evaluation
     pipelines and CI/CD integration).

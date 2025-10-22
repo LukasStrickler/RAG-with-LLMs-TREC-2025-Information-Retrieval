@@ -2,12 +2,9 @@
 Backend API response models and types.
 """
 
-from typing import Any
-
 from pydantic import BaseModel
 
 from shared.data import ChunkingSpec, DatasetSpec, IndexTarget
-
 
 
 class MetadataResponse(BaseModel):

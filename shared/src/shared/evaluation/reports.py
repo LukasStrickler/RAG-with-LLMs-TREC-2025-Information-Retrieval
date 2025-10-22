@@ -2,7 +2,7 @@
 Evaluation reports and experiment manifests.
 """
 
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .metrics import EvaluationDiagnostics, MetricValue
 from .runs import RetrievalRun
@@ -24,30 +24,22 @@ class ExperimentManifest(BaseModel):
     """Experiment manifest."""
 
     experiment_id: str = Field(
-        ..., 
-        description="Experiment identifier",
-        pattern=r"^[a-zA-Z0-9_-]+$"
+        ..., description="Experiment identifier", pattern=r"^[a-zA-Z0-9_-]+$"
     )
     schema_version: str = Field(
-        ..., 
-        description="Schema version",
-        pattern=r"^\d+\.\d+\.\d+$"
+        ..., description="Schema version", pattern=r"^\d+\.\d+\.\d+$"
     )
     dataset_version: str = Field(
-        ..., 
-        description="Dataset version",
-        pattern=r"^\d+\.\d+\.\d+$"
+        ..., description="Dataset version", pattern=r"^\d+\.\d+\.\d+$"
     )
     config_hash: str = Field(
-        ..., 
-        description="SHA-256 hash of configuration",
-        pattern=r"^[a-fA-F0-9]{64}$"
+        ..., description="SHA-256 hash of configuration", pattern=r"^[a-fA-F0-9]{64}$"
     )
     run_ids: list[str] = Field(..., description="Run identifiers")
     metrics: list[MetricValue] = Field(..., description="Selected metrics")
     notes: str | None = Field(None, description="Experiment notes")
 
-    @field_validator('run_ids')
+    @field_validator("run_ids")
     @classmethod
     def validate_run_ids_unique(cls, v):
         """Ensure run_ids are unique."""

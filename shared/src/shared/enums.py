@@ -9,7 +9,7 @@ from enum import Enum
 
 class IndexKind(str, Enum):
     """Types of retrieval indexes supported by the system."""
-    
+
     LEXICAL = "lexical"  # Term-based retrieval (BM25, TF-IDF)
     VECTOR = "vector"  # Dense embedding similarity search
     HYBRID = "hybrid"  # Combined lexical + vector scoring
@@ -17,7 +17,7 @@ class IndexKind(str, Enum):
 
 class MetricName(str, Enum):
     """TREC evaluation metrics."""
-    
+
     NDCG_AT_10 = "ndcg@10"  # Normalized Discounted Cumulative Gain at 10
     MAP_AT_100 = "map@100"  # Mean Average Precision at 100
     MRR_AT_10 = "mrr@10"  # Mean Reciprocal Rank at 10
