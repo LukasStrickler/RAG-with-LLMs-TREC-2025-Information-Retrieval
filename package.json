@@ -3,6 +3,9 @@
   "private": true,
   "scripts": {
     "update-all": "bash scripts/update-deps.sh",
+    "backend:dev": "cd backend/api && poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "backend": "cd backend/api && poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000",
+    "docs:uml": "bash scripts/generate-uml.sh",
     "lint:backend:api": "cd backend/api && poetry run ruff check . && poetry run black --check .",
     "lint:backend:embeddings": "cd backend/embeddings && poetry run ruff check . && poetry run black --check .",
     "lint:backend:eval": "cd backend/eval && poetry run ruff check . && poetry run black --check .",
