@@ -1,0 +1,50 @@
+@startuml
+title Retrieval Run Flow (CLI ⇄ API ⇄ Indexes)
+autonumber
+
+
+actor Dev
+participant "CLI: runs fetch" as CLI
+participant "FastAPI /retrieve/batch" as API
+participant "Lexical Adapter" as LEX
+participant "Vector Adapter" as VEC
+participant "Fusion Engine" as FUSE
+database "Metadata Store" as META
+database "Indexes" as IDX
+participant "CLI: runs validate" as VAL
+participant "trec_eval" as TRE
+participant "CLI: metrics compute" as MET
+
+
+
+
+Dev -> CLI: benchmark run -config benchmark.json -topics topics.jsonl
+loop for each mode (lexical, dense, hybrid)
+  CLI -> API: POST RetrievalRequest (mode-specific)
+  API -> LEX: search(query, top_k) [if lexical/hybrid]
+  LEX -> IDX: BM25 lookup
+  IDX --> LEX: lexical hits
+  API -> VEC: search(query, top_k) [if dense/hybrid]
+  VEC -> IDX: vector lookup
+  IDX --> VEC: vector hits
+  API -> FUSE: merge(lexical_hits, vector_hits) [if hybrid]
+  FUSE -> META: enrich metadata
+  META --> FUSE: titles, urls, headings
+  FUSE --> API: fused hits + diagnostics
+  API --> CLI: RetrievalResponse
+  CLI -> VAL: runs validate run_{mode}.tsv
+  VAL -> VAL: enforce 6 cols, ≤100 ranks, monotonic score, valid IDs
+  CLI -> MET: metrics compute -run run_{mode}.tsv -qrels qrels.txt
+  note over MET
+    qrels.txt: TREC ground-truth relevance judgements
+    Source: MS MARCO v2.1 official qrels
+  end note
+  MET -> TRE: trec_eval (ndcg_cut.10 map_cut.100 ...)
+  TRE --> MET: metrics stdout
+  MET -> MET: EvaluationReport_{mode} + metrics
+end
+CLI -> CLI: generate BenchmarkReport with comparison table
+CLI -> CLI: output BenchmarkComparison.md
+
+@enduml
+

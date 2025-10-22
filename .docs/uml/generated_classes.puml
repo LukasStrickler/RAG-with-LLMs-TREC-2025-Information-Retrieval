@@ -1,0 +1,199 @@
+@startuml shared_types
+title Shared Types - RAG TREC 2025
+
+package "Enums" {
+  enum IndexKind {
+    LEXICAL
+    VECTOR
+    HYBRID
+  }
+  enum MetricName {
+    NDCG_AT_10
+    MAP_AT_100
+    MRR_AT_10
+    RECALL_AT_50
+    RECALL_AT_100
+    HIT_RATE_AT_10
+  }
+}
+
+class ApiInfoResponse {
+  +message: str
+  +version: str
+  +description: str
+  +docs: list[str, str]
+  +contact: list[str, str]
+}
+
+class HealthResponse {
+  +status: str
+  +version: str
+  +timestamp: str
+}
+
+class MetadataResponse {
+  +dataset_spec: DatasetSpec
+  +chunking_spec: ChunkingSpec
+  +available_indexes: list[IndexTarget]
+  +schema_version: str
+}
+
+class ChunkingSpec {
+  +chunk_size: int
+  +overlap: int
+  +tokenizer: str
+  +strategy: list['fixed', 'semantic', 'sliding']
+}
+
+class DatasetSpec {
+  +name: str
+  +version: str
+  +split: str | None
+  +release_date: str
+  +source_uri: HttpUrl
+}
+
+class IndexTarget {
+  +kind: enum_IndexKind
+  +uri: str
+  +snapshot_id: str
+}
+
+class EvaluationDiagnostics {
+  +trec_eval_version: str
+  +runtime_seconds: float
+  +warnings: list[str]
+}
+
+class MetricValue {
+  +name: enum_MetricName
+  +value: float
+  +higher_is_better: bool
+  +target: float | None
+  +pass_flag: bool | None
+}
+
+class EvaluationReport {
+  +run_metadata: RetrievalRun
+  +metric_values: list[MetricValue]
+  +diagnostics: EvaluationDiagnostics
+}
+
+class ExperimentManifest {
+  +experiment_id: str
+  +schema_version: str
+  +dataset_version: str
+  +config_hash: str
+  +run_ids: list[str]
+  +metrics: list[MetricValue]
+  +notes: str | None
+}
+
+class RetrievalRun {
+  +run_id: str
+  +schema_version: str
+  +dataset_version: str
+  +config_hash: str
+  +request: RetrievalRequest
+  +response: RetrievalResponse
+}
+
+class TrecRun {
+  +rows: list[TrecRunRow]
+}
+
+class TrecRunRow {
+  +topic_id: str
+  +q0: str
+  +segment_id: str
+  +rank: int
+  +score: float
+  +run_id: str
+}
+
+class RetrievalConfig {
+  +mode: enum_IndexKind
+  +index_targets: list[IndexTarget]
+  +weights: list[str, float]
+}
+
+class Query {
+  +query_id: str
+  +query_text: str
+  +top_k: int
+}
+
+class RetrievalRequest {
+  +schema_version: str
+  +dataset_version: str
+  +config_hash: str
+  +config: RetrievalConfig
+  +queries: list[Query]
+}
+
+class ProvenanceInfo {
+  +index_kind: enum_IndexKind
+  +index_snapshot: str
+  +score_components: list[str, float]
+}
+
+class QueryResult {
+  +query_id: str
+  +segments: list[RetrievedSegment]
+  +diagnostics: RetrievalDiagnostics
+}
+
+class RetrievalDiagnostics {
+  +latency_ms: float
+  +config_hash: str
+  +index_versions: list[str, str]
+  +warnings: list[str]
+}
+
+class RetrievalResponse {
+  +schema_version: str
+  +dataset_version: str
+  +config_hash: str
+  +request_id: str
+  +results: list[QueryResult]
+}
+
+class RetrievedSegment {
+  +segment_id: str
+  +score: float
+  +metadata: SegmentMetadata
+  +provenance: ProvenanceInfo
+}
+
+class SegmentMetadata {
+  +title: str | None
+  +url: str | None
+  +headings: list[str]
+  +extras: list[str, str | int | float | bool]
+}
+
+' Dynamic Relationships
+EvaluationReport *-- EvaluationDiagnostics
+EvaluationReport *-- MetricValue
+EvaluationReport *-- RetrievalRun
+ExperimentManifest *-- MetricValue
+MetadataResponse *-- ChunkingSpec
+MetadataResponse *-- DatasetSpec
+MetadataResponse *-- IndexTarget
+QueryResult *-- RetrievalDiagnostics
+QueryResult *-- RetrievedSegment
+RetrievalConfig *-- IndexTarget
+RetrievalRequest *-- Query
+RetrievalRequest *-- RetrievalConfig
+RetrievalResponse *-- QueryResult
+RetrievalRun o-- RetrievalRequest
+RetrievalRun o-- RetrievalResponse
+RetrievedSegment *-- ProvenanceInfo
+RetrievedSegment *-- SegmentMetadata
+TrecRun *-- TrecRunRow
+
+' Reference Relationships
+DatasetSpec --> IndexTarget : indexes built from
+ChunkingSpec --> IndexTarget : indexes built from
+TrecRunRow --> RetrievedSegment : materialises from
+@enduml

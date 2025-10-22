@@ -1,20 +1,20 @@
 [tool.poetry]
-name = "backend-embeddings"
+name = "shared-types"
 version = "0.1.0"
-description = "Embeddings worker"
+description = "Shared Pydantic models for RAG TREC 2025 project"
 authors = ["RAG Team"]
 license = "MIT"
-readme = "../../README.md"
+readme = "../README.md"
+package-mode = true
+packages = [{include = "shared", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-pandas = "^2.2.3"
-shared-types = {path = "../../shared", develop = true}
+pydantic = "^2.9.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.10.0"
 ruff = "^0.7.0"
-pytest = "^8.3.3"
 
 [tool.black]
 line-length = 88
@@ -33,7 +33,6 @@ ignore = []
 quote-style = "double"
 indent-style = "space"
 line-ending = "lf"
-
 
 [build-system]
 requires = ["poetry-core"]

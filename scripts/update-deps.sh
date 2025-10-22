@@ -66,12 +66,16 @@ done
 if ! command -v poetry >/dev/null 2>&1; then
   echo "[warn] Poetry not found. Skipping backend dependency installation." >&2
 else
-  services=(backend/api backend/embeddings backend/eval)
+  services=(shared backend/api backend/embeddings backend/eval)
   for service in "${services[@]}"; do
     project_dir="${ROOT_DIR}/${service}"
     if [ -f "${project_dir}/pyproject.toml" ]; then
       echo "[info] Installing dependencies for ${service}" >&2
-      (cd "${project_dir}" && poetry install --no-root)
+      if [ "${service}" = "shared" ]; then
+        (cd "${project_dir}" && poetry install)
+      else
+        (cd "${project_dir}" && poetry install --no-root)
+      fi
     else
       echo "[warn] Skipping ${service} (pyproject.toml not found)" >&2
     fi
@@ -106,4 +110,3 @@ if [ ${#missing_keys[@]} -gt 0 ]; then
 fi
 
 echo "[done] Dependency installation complete." >&2
-

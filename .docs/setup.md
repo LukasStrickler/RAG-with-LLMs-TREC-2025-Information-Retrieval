@@ -6,7 +6,7 @@ Run this from the repository root to copy environment files and install all depe
 npm run update-all
 ```
 
-> Tip: Rerun `npm run update-all` after changing backend or frontend dependencies.
+> Tip: Rerun `npm run update-all` after changing backend or frontend dependencies so the shared types package is rebuilt in every Poetry environment.
 
 ## Linting & Formatting Quick Reference
 
@@ -88,10 +88,12 @@ For broader guidance on naming patterns and lint rules, see [`./coding-conventio
    poetry config virtualenvs.in-project true
    ```
 
-3. Bootstrap services:
+3. Bootstrap services (shared package first, then each backend):
 
    ```bash
-   cd backend/api
+   cd shared
+   poetry install
+   cd ../backend/api
    poetry install --no-root
    cd ../embeddings
    poetry install --no-root

@@ -1,0 +1,160 @@
+@startuml
+title Core Types — Simplified Interface Diagram
+
+' Note: HttpUrl refers to Pydantic's validated URL type (not unconstrained string)
+
+class DatasetSpec {
+  +name: str
+  +version: str
+  +split: str?
+  +release_date: str
+  +source_uri: HttpUrl
+}
+
+class IndexTarget {
+  +kind: enum{bm25,vector,hybrid}
+  +uri: str
+  +snapshot_id: str
+}
+
+
+class SegmentMetadata {
+  +title: str?
+  +url: str?
+  +headings: [str]
+  +extras: Map<str,str|int|float|bool>
+}
+
+class ChunkingSpec {
+  +chunk_size: int
+  +overlap: int
+  +tokenizer: str
+  +strategy: str
+}
+
+class ProvenanceInfo {
+  +index_kind: enum{bm25,vector,hybrid}
+  +index_snapshot: str
+  +score_components: Map<str,float>
+}
+
+class RetrievedSegment {
+  +segment_id: str
+  +score: float
+  +metadata: SegmentMetadata
+  +provenance: ProvenanceInfo
+}
+
+class RetrievalDiagnostics {
+  +latency_ms: float
+  +config_hash: str
+  +index_versions: Map<str,str>
+  +warnings: [str]
+}
+
+class RetrievalConfig {
+  +mode: enum{lexical,dense,hybrid}
+  +index_targets: [IndexTarget]
+  +weights: Map<str,float>?
+}
+
+class Query {
+  +query_id: str
+  +query_text: str
+  +top_k: int (<=100)
+}
+
+class RetrievalRequest {
+  +schema_version: str
+  +dataset_version: str
+  +config_hash: str
+  +config: RetrievalConfig
+  +queries: [Query] (1..*)
+}
+
+class QueryResult {
+  +query_id: str
+  +segments: [RetrievedSegment]
+  +diagnostics: RetrievalDiagnostics
+}
+
+class RetrievalResponse {
+  +schema_version: str
+  +dataset_version: str
+  +config_hash: str
+  +request_id: str
+  +results: [QueryResult] (1..*)
+}
+
+
+class TrecRunRow {
+  +topic_id: str
+  +q0: "Q0"
+  +segment_id: str
+  +rank: int (1..100)
+  +score: float (non-increasing)
+  +run_id: str
+}
+
+class MetricValue {
+  +name: enum{ndcg@10,map@100,...}
+  +value: float
+  +higher_is_better: bool
+  +target: float?
+  +pass_flag: bool?
+}
+
+class EvaluationDiagnostics {
+  +trec_eval_version: str
+  +runtime_seconds: float
+  +warnings: [str]
+}
+
+class RetrievalRun {
+  +run_id: str
+  +schema_version: str
+  +dataset_version: str
+  +config_hash: str
+  +request: RetrievalRequest
+  +response: RetrievalResponse
+}
+
+class EvaluationReport {
+  +run_metadata: RetrievalRun
+  +metric_values: [MetricValue]
+  +diagnostics: EvaluationDiagnostics
+}
+
+class ExperimentManifest {
+  +experiment_id: str
+  +schema_version: str
+  +dataset_version: str
+  +config_hash: str
+  +run_ids: [str]
+  +metrics: [MetricValue]
+  +notes: str?
+}
+
+RetrievalConfig *-- IndexTarget
+RetrievalRequest *-- RetrievalConfig
+RetrievalRequest "1" *-- "1..*" Query
+RetrievedSegment *-- SegmentMetadata
+RetrievedSegment *-- ProvenanceInfo
+QueryResult *-- RetrievedSegment
+QueryResult *-- RetrievalDiagnostics
+RetrievalResponse "1" *-- "1..*" QueryResult
+RetrievalRun o-- RetrievalRequest
+RetrievalRun o-- RetrievalResponse
+EvaluationReport *-- RetrievalRun
+EvaluationReport *-- MetricValue
+EvaluationReport *-- EvaluationDiagnostics
+ExperimentManifest *-- MetricValue
+
+DatasetSpec --> IndexTarget : indexes built from
+ChunkingSpec --> IndexTarget : indexes built from
+
+TrecRunRow --> RetrievedSegment : materialises from
+
+
+@enduml
+
