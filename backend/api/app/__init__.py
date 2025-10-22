@@ -15,7 +15,7 @@ Public API:
 """
 
 # Re-export key public entities
-from app.main import app
 from app.config import settings
+from app.main import app
 
 __all__ = ["app", "settings"]
