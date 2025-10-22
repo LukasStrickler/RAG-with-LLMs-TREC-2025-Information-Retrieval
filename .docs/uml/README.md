@@ -20,21 +20,21 @@ cat .docs/uml/generated_classes.puml
 
 ### Components
 
-1. **`scripts/generate_uml.py`** - Core Python script that analyzes Pydantic models
-2. **`scripts/generate_uml.sh`** - Shell orchestrator that manages the generation process
-3. **`shared/`** - Poetry environment containing the shared types
-4. **`.docs/uml/generated_classes.puml`** - Generated PlantUML output
+1. **`./scripts/generate_uml.py`** - Core Python script that analyzes Pydantic models
+2. **`./scripts/generate-uml.sh`** - Shell orchestrator that manages the generation process
+3. **`./shared/`** - Poetry environment containing the shared types
+4. **`./.docs/uml/generated_classes.puml`** - Generated PlantUML output
 
 ### Process Flow
 
 ```mermaid
 flowchart TD
-    A[npm run docs:uml] --> B[scripts/generate-uml.sh]
-    B --> C[Setup shared Poetry env]
-    C --> D[Run generate_uml.py]
+    A[npm run docs:uml] --> B[./scripts/generate-uml.sh]
+    B --> C[Setup ./shared/ Poetry env]
+    C --> D[Run ./scripts/generate_uml.py]
     D --> E[Analyze Pydantic models]
     E --> F[Generate PlantUML]
-    F --> G[Output to .docs/uml/]
+    F --> G[Output to ./.docs/uml/]
 ```
 
 ## Features
@@ -190,10 +190,9 @@ print("NewClass --> OtherClass : new relationship")
 
 ## Related Files
 
-- [`.cursor/rules/uml-generation.mdc`](../.cursor/rules/uml-generation.mdc) - Cursor IDE rule
-- [`.docs/uml/classes.puml`](classes.puml) - Original UML specification
-- [`shared/`](../shared/) - Shared types directory
-- [`scripts/`](../scripts/) - Generation scripts
+- [`.docs/uml/classes.puml`](./classes.puml) - Original UML specification
+- [`shared/`](../../shared/) - Shared types directory
+- [`scripts/`](../../scripts/) - Generation scripts
 
 ## Contributing
 

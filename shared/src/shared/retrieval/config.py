@@ -12,12 +12,27 @@ class RetrievalConfig(BaseModel):
     """Retrieval configuration."""
 
     mode: IndexKind = Field(..., description="Retrieval mode")
-    index_targets: list[IndexTarget] = Field(..., description="Index targets")
-    weights: dict[str, float] | None = Field(None, description="Weight configuration")
+    index_targets: list[IndexTarget] = Field(
+        ..., description="Index targets (must contain at least one entry)", min_length=1
+    )
+    weights: dict[str, float] | None = Field(
+        None,
+        description="Weight config (if provided, non-empty, keys match targets)",
+    )
 
     @model_validator(mode="after")
-    def validate_weights(self):
-        if self.weights:
+    def validate_config(self):
+        """Validate retrieval configuration for completeness and consistency."""
+        # Check index_targets is not empty (redundant with min_length but explicit)
+        if not self.index_targets:
+            raise ValueError("index_targets must contain at least one entry")
+
+        # Check weights if provided
+        if self.weights is not None:
+            # Check weights is not empty dict
+            if not self.weights:
+                raise ValueError("weights cannot be an empty dictionary when provided")
+
             # Check non-negative values
             for key, weight in self.weights.items():
                 if weight < 0:

@@ -1,12 +1,14 @@
 @startuml
 title Core Types — Simplified Interface Diagram
 
+' Note: HttpUrl refers to Pydantic's validated URL type (not unconstrained string)
+
 class DatasetSpec {
   +name: str
   +version: str
   +split: str?
   +release_date: str
-  +source_uri: str
+  +source_uri: HttpUrl
 }
 
 class IndexTarget {

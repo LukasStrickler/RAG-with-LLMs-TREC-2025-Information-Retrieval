@@ -25,7 +25,7 @@ All protected endpoints expect an `X-API-Key` header. To configure it locally:
 | Method | Path | Description | Notes |
 | --- | --- | --- | --- |
 | `GET` | `/health` | Heartbeat and version info | Public endpoint (no auth required). |
-| `POST` | `/api/v1/metadata` | Returns dataset, chunking, and index metadata | Served from placeholders until the metadata DB is in place. |
+| `GET` | `/api/v1/metadata` | Returns dataset, chunking, and index metadata | Served from placeholders until the metadata DB is in place. |
 | `POST` | `/api/v1/retrieve` | Retrieval contract returning mock segments | TODO: wire to real retrieval service + indexes. |
 
 ## Useful Commands

@@ -27,21 +27,36 @@ class TrecRun(BaseModel):
 
     @model_validator(mode="after")
     def validate_monotonicity(self):
-        """Ensure scores are non-increasing within each topic."""
+        """Ensure scores are non-increasing within each topic and no duplicate ranks."""
         from collections import defaultdict
 
         topics = defaultdict(list)
         for row in self.rows:
             topics[row.topic_id].append(row)
 
+        eps = 1e-9  # Tolerance for floating-point noise
+
         for topic_id, rows in topics.items():
             sorted_rows = sorted(rows, key=lambda r: r.rank)
+
+            # Check for duplicate ranks
             for i in range(1, len(sorted_rows)):
-                if sorted_rows[i].score > sorted_rows[i - 1].score:
+                if sorted_rows[i].rank == sorted_rows[i - 1].rank:
+                    raise ValueError(
+                        f"Duplicate rank {sorted_rows[i].rank} in topic {topic_id}: "
+                        f"found at positions {i-1} and {i}"
+                    )
+
+            # Check score monotonicity with epsilon tolerance
+            for i in range(1, len(sorted_rows)):
+                current_score = sorted_rows[i].score
+                previous_score = sorted_rows[i - 1].score
+                if current_score > previous_score + eps:
                     raise ValueError(
                         f"Score monotonicity violation in topic {topic_id}: "
-                        f"rank {sorted_rows[i].rank} score {sorted_rows[i].score} > "
-                        f"rank {sorted_rows[i-1].rank} score {sorted_rows[i-1].score}"
+                        f"rank {sorted_rows[i].rank} score {current_score} > "
+                        f"rank {sorted_rows[i-1].rank} score {previous_score} "
+                        f"(tolerance: {eps})"
                     )
         return self
 
