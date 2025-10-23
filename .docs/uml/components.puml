@@ -42,7 +42,7 @@ package "Artifacts" {
   [BenchmarkReport.json]
   [BenchmarkComparison.md]
   [metrics.yaml]
-  [Schema (JSON)]
+  [Pydantic Models]
 }
 
 [datasets sync] --> [IngestionManifest (JSON)] : write spec
@@ -76,12 +76,12 @@ package "Artifacts" {
 [Evaluation CLI] --> [EvaluationReport.json]
 [Evaluation CLI] --> [ExperimentManifest.jsonl]
 [Evaluation CLI] --> [metrics.yaml]
-[Evaluation CLI] --> [Schema (JSON)]
+[Evaluation CLI] --> [Pydantic Models]
 [Evaluation CLI] --> [BenchmarkReport.json]
 [Evaluation CLI] --> [BenchmarkComparison.md]
 
-[Schema (JSON)] --> [FastAPI Layer] : shared models
-[Schema (JSON)] --> [Evaluation CLI] : shared models
+[Pydantic Models] --> [FastAPI Layer] : shared models
+[Pydantic Models] --> [Evaluation CLI] : shared models
 
 @enduml
 

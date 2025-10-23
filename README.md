@@ -27,7 +27,6 @@
 │  └─ eval/           # Evaluation CLI + TREC tooling (stubbed)
 ├─ frontend/          # Deno prototype (Next.js migration planned)
 ├─ shared/            # Pydantic models + enums shared across services
-├─ schema/            # JSON Schemas used by pipelines and API
 ├─ scripts/           # Automation (deps update, UML generation)
 └─ .docs/             # Setup guides, API docs, UML, KPIs, meeting notes
 ```
@@ -72,11 +71,17 @@ flowchart TD
 | Blue | Orange | Green | Purple | Red |
 
 ### Data Contracts
-All data types referenced in the diagram above are defined in [`shared/`](shared/) and documented in [`.docs/uml/classes.puml`](.docs/uml/classes.puml):
-- `DatasetSpec`, `ChunkingSpec` — dataset metadata and chunking configuration.
-- `IndexTarget` — registered index endpoints (BM25, vector, hybrid planned).
-- `MetadataResponse` — API payload bundling dataset, chunking, and index registry details.
-- `RetrievalRequest`, `RetrievalResponse`, `RetrievedSegment`, `QueryResult`, `RetrievalDiagnostics` — retrieval contracts exposed by the API.
+All data types referenced in the diagram above are defined as **Pydantic models** in [`shared/`](shared/) and documented in [`.docs/uml/classes.puml`](.docs/uml/classes.puml). These models provide:
+- **Runtime validation** for all API requests and responses
+- **Automatic OpenAPI schema generation** for FastAPI documentation
+- **Type safety** across all Python services
+- **Serialization/deserialization** with built-in JSON support
+
+Key model categories:
+- `DatasetSpec`, `ChunkingSpec` — dataset metadata and chunking configuration
+- `IndexTarget` — registered index endpoints (BM25, vector, hybrid planned)
+- `MetadataResponse` — API payload bundling dataset, chunking, and index registry details
+- `RetrievalRequest`, `RetrievalResponse`, `RetrievedSegment`, `QueryResult`, `RetrievalDiagnostics` — retrieval contracts exposed by the API
 
 ### 1. Dataset (Development Subset)
 - Curated slice of the corpus for fast iteration and cost control.
