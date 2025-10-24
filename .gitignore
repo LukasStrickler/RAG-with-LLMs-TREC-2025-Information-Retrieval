@@ -50,3 +50,6 @@ Thumbs.db
 
 # CodeRabbit review output
 .review/
+
+# Evaluation data assets
+.data/

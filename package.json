@@ -14,6 +14,7 @@
     "format:backend:embeddings": "cd backend/embeddings && poetry run black .",
     "format:backend:eval": "cd backend/eval && poetry run black .",
     "format:backend": "npm run format:backend:api && npm run format:backend:embeddings && npm run format:backend:eval",
+    "pull:qrel": "bash scripts/pull_qrels.sh",
     "lint:frontend": "cd frontend && deno task lint",
     "format:frontend": "cd frontend && deno task fmt",
     "lint": "npm run lint:backend && npm run lint:frontend",
@@ -21,4 +22,3 @@
     "review": "mkdir -p .review && coderabbit --base main --prompt-only > .review/coderabbit_review_$(date +%Y%m%d_%H%M%S).txt"
   }
 }
-
