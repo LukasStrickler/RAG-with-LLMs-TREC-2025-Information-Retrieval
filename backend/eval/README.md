@@ -31,6 +31,18 @@ npm run backend:dev  # In project root
 
 ### 2. Basic Usage
 
+**Option A: Using npm scripts (Recommended)**
+
+```bash
+# From project root - handles Poetry environment automatically
+npm run benchmark                    # Run all retrieval modes (lexical, vector, hybrid)
+npm run benchmark:lexical           # Run lexical retrieval only
+npm run benchmark:hybrid            # Run hybrid retrieval only
+npm run benchmark:vector            # Run vector retrieval only
+```
+
+**Option B: Using poetry directly**
+
 ```bash
 # Run evaluation for a single mode
 poetry run eval pipeline run rag24 --mode hybrid
@@ -221,6 +233,18 @@ poetry run eval benchmark targets
 
 Complete evaluation workflows:
 
+**Using npm scripts (from project root):**
+```bash
+# Run all modes and compare (recommended)
+npm run benchmark
+
+# Run specific retrieval mode
+npm run benchmark:lexical   # Lexical (BM25)
+npm run benchmark:hybrid    # Hybrid (fusion)
+npm run benchmark:vector    # Vector (semantic)
+```
+
+**Using poetry directly:**
 ```bash
 # Run single mode evaluation
 poetry run eval pipeline run rag24 --mode hybrid --experiment-id test1

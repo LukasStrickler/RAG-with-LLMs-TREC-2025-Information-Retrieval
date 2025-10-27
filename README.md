@@ -154,6 +154,10 @@ Key model categories:
 | `npm run update-all` | Install/update all dependencies across all services |
 | `npm run lint` | Run linting for all backend and frontend code |
 | `npm run format` | Format all backend and frontend code |
+| `npm run benchmark` | Run evaluation for all retrieval modes (lexical, vector, hybrid) |
+| `npm run benchmark:lexical` | Run evaluation for lexical retrieval mode only |
+| `npm run benchmark:hybrid` | Run evaluation for hybrid retrieval mode only |
+| `npm run benchmark:vector` | Run evaluation for vector retrieval mode only |
 
 ## Team
 - Lean Fürst — [lean.henriques.fuerst@students.uni-mannheim.de](mailto:lean.henriques.fuerst@students.uni-mannheim.de)
