@@ -139,5 +139,7 @@ class KPIAnalyzer:
         }
 
         console.print(
-            f"\n[bold {status_colors[report.overall_status]}]Overall Status: {report.overall_status.upper()}[/bold {status_colors[report.overall_status]}]"
+            f"\n[bold {status_colors[report.overall_status]}]"
+            f"Overall Status: {report.overall_status.upper()}"
+            f"[/bold {status_colors[report.overall_status]}]"
         )

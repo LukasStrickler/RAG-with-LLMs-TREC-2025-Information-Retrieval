@@ -99,7 +99,7 @@ class Config(BaseSettings):
 
     # Load API key directly from .env
     api_key: str | None = Field(default=None, description="API key from .env")
-    
+
     api: APIConfig = Field(default_factory=APIConfig)
     retrieval: CLIRetrievalConfig = Field(default_factory=CLIRetrievalConfig)
     paths: PathsConfig = Field(default_factory=PathsConfig)
@@ -131,11 +131,11 @@ class Config(BaseSettings):
 
         # Create config instance
         config_instance = cls(**config_data)
-        
+
         # Inject API key from .env into nested api config
         if config_instance.api_key:
             config_instance.api.api_key = config_instance.api_key
-        
+
         return config_instance
 
     @staticmethod
@@ -151,10 +151,13 @@ class Config(BaseSettings):
             current = current.parent
 
         # No valid project root found - raise explicit error
-        raise RuntimeError(
-            f"Could not determine project root. Tried paths from: {Path(__file__).parent}\n"
-            f"Please set PROJECT_ROOT environment variable or ensure you're running from the project directory."
+        error_msg = (
+            f"Could not determine project root. "
+            f"Tried paths from: {Path(__file__).parent}\n"
+            "Please set PROJECT_ROOT environment variable or "
+            "ensure you're running from the project directory."
         )
+        raise RuntimeError(error_msg)
 
     def get_project_root(self) -> Path:
         """Get project root path."""

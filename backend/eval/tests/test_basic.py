@@ -2,11 +2,11 @@
 Basic tests for the evaluation CLI.
 """
 
-import pytest
 from pathlib import Path
+
 from eval_cli.config import Config
-from eval_cli.io.topics import load_topics
 from eval_cli.io.qrels import load_qrels
+from eval_cli.io.topics import load_topics
 from eval_cli.models.topics import Topic, TopicSet
 
 
@@ -26,7 +26,7 @@ def test_topic_loading():
     topic_set = load_topics(trec_path)
     assert len(topic_set) > 0
     assert topic_set.format == "trec"
-    
+
     # Test JSONL format
     jsonl_path = Path(__file__).parent / "fixtures" / "topics_sample.jsonl"
     topic_set = load_topics(jsonl_path)
@@ -44,11 +44,7 @@ def test_qrels_loading():
 
 def test_topic_model():
     """Test topic model functionality."""
-    topic = Topic(
-        query_id="1",
-        query="test query",
-        narrative="test narrative"
-    )
+    topic = Topic(query_id="1", query="test query", narrative="test narrative")
     assert topic.query_length == 2
     assert topic.query_id == "1"
 
@@ -59,11 +55,7 @@ def test_topic_set():
         Topic(query_id="1", query="query 1"),
         Topic(query_id="2", query="query 2"),
     ]
-    topic_set = TopicSet(
-        topics=topics,
-        source_file="test.txt",
-        format="trec"
-    )
+    topic_set = TopicSet(topics=topics, source_file="test.txt", format="trec")
     assert len(topic_set) == 2
     assert topic_set.get_by_id("1") is not None
     assert topic_set.get_by_id("3") is None

@@ -115,8 +115,7 @@ def run(
         if not qrels_rel_path:
             available = list(config.paths.qrels.keys())
             raise RuntimeError(
-                f"No qrels configured for topics='{topics}'. "
-                f"Available: {available}"
+                f"No qrels configured for topics='{topics}'. " f"Available: {available}"
             )
         qrels_path = config.get_data_path(qrels_rel_path)
         trec_eval = TrecEvalWrapper(config)
@@ -190,8 +189,7 @@ def benchmark(
         if not qrels_rel_path:
             available = list(config.paths.qrels.keys())
             raise RuntimeError(
-                f"No qrels configured for topics='{topics}'. "
-                f"Available: {available}"
+                f"No qrels configured for topics='{topics}'. " f"Available: {available}"
             )
         qrels_path = config.get_data_path(qrels_rel_path)
         trec_eval = TrecEvalWrapper(config)
@@ -303,8 +301,7 @@ def run_all_modes(
         if not qrels_rel_path:
             available = list(config.paths.qrels.keys())
             raise RuntimeError(
-                f"No qrels configured for topics='{topics}'. "
-                f"Available: {available}"
+                f"No qrels configured for topics='{topics}'. " f"Available: {available}"
             )
         qrels_path = config.get_data_path(qrels_rel_path)
         trec_eval = TrecEvalWrapper(config)

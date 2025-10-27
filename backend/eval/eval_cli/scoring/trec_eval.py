@@ -80,7 +80,7 @@ class TrecEvalWrapper:
 
             # Transpose to get {metric_name: list of scores across queries}
             metrics_by_name = {}
-            for query_id, query_scores in results.items():
+            for _query_id, query_scores in results.items():
                 for metric_name, score in query_scores.items():
                     if metric_name not in metrics_by_name:
                         metrics_by_name[metric_name] = []

@@ -9,6 +9,29 @@ from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def _find_project_root() -> Path:
+    """Find project root by looking for shared/ and backend/ directories."""
+    current = Path(__file__).parent
+
+    # Walk up directories looking for project root
+    while current != current.parent:
+        # Check if this is the main project root (has shared/ directory)
+        if (current / "shared").exists() and (current / "backend").exists():
+            return current
+        current = current.parent
+
+    # Fallback: return backend/api parent
+    return Path(__file__).parent.parent.parent
+
+
+def _get_default_qrels_path() -> Path:
+    """Get default qrels path relative to project root."""
+    project_root = _find_project_root()
+    return (
+        project_root / ".data" / "trec_rag_assets" / "qrels.rag24.test-umbrela-all.txt"
+    )
+
+
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
@@ -25,7 +48,7 @@ class Settings(BaseSettings):
 
     # Data Configuration
     qrels_path: Path = Field(
-        default=Path("/Users/lukasstrickler/Desktop/Personal Projects/00 - University/RAG-with-LLMs-TREC-2025-Information-Retrieval/.data/trec_rag_assets/qrels.rag24.test-umbrela-all.txt"),
+        default_factory=_get_default_qrels_path,
         description="Path to qrels file for mock retrieval service",
     )
 

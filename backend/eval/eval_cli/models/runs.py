@@ -23,7 +23,10 @@ class TrecRunRow(BaseModel):
 
     def to_trec_line(self) -> str:
         """Format as TREC 6-column TSV."""
-        return f"{self.query_id}\t{self.q0}\t{self.doc_id}\t{self.rank}\t{self.score:.6f}\t{self.run_id}"
+        return (
+            f"{self.query_id}\t{self.q0}\t{self.doc_id}\t{self.rank}\t"
+            f"{self.score:.6f}\t{self.run_id}"
+        )
 
 
 class RunMetadata(BaseModel):
