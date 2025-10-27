@@ -3,9 +3,10 @@ FastAPI application configuration.
 """
 
 import sys
+from pathlib import Path
 
-from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic import Field, SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -14,12 +15,18 @@ class Settings(BaseSettings):
     # API Server Configuration
     api_host: str = Field(default="0.0.0.0", description="API host address")
     api_port: int = Field(default=8000, ge=1, le=65535, description="API port")
-    api_key: str = Field(
+    api_key: SecretStr = Field(
         ..., min_length=32, description="API authentication key (minimum 32 characters)"
     )
 
     cors_origins: list[str] = Field(
         default=["http://localhost:3000"], description="Allowed CORS origins"
+    )
+
+    # Data Configuration
+    qrels_path: Path = Field(
+        default=Path("/Users/lukasstrickler/Desktop/Personal Projects/00 - University/RAG-with-LLMs-TREC-2025-Information-Retrieval/.data/trec_rag_assets/qrels.rag24.test-umbrela-all.txt"),
+        description="Path to qrels file for mock retrieval service",
     )
 
     # Application Metadata
@@ -32,10 +39,11 @@ class Settings(BaseSettings):
         description="App description",
     )
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+    )
 
 
 try:

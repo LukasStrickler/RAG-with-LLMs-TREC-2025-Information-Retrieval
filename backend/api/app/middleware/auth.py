@@ -30,8 +30,15 @@ def get_api_key(api_key: str | None = Security(api_key_header)) -> str:
     Raises:
         HTTPException: 401 if API key is invalid or missing
     """
+    # Validate that API key is configured
+    if not settings.api_key.get_secret_value():
+        raise HTTPException(
+            status_code=500,
+            detail="API key not configured. Please contact administrator.",
+        )
+
     # Use hmac.compare_digest for timing-safe comparison to prevent timing attacks
-    if api_key and hmac.compare_digest(api_key, settings.api_key):
+    if api_key and hmac.compare_digest(api_key, settings.api_key.get_secret_value()):
         return api_key
     raise HTTPException(
         status_code=401,
