@@ -175,14 +175,23 @@ class Config(BaseSettings):
         project_root = self.get_project_root()
         return project_root / self.paths.output_dir / relative_path
 
-    def model_dump(self) -> dict[str, Any]:
-        """Dump configuration as dictionary."""
-        return {
-            "api": self.api.model_dump(),
-            "retrieval": self.retrieval.model_dump(),
-            "paths": self.paths.model_dump(),
-            "mock": self.mock.model_dump(),
-            "metrics": self.metrics.model_dump(),
-            "trec_eval": self.trec_eval.model_dump(),
-            "logging": self.logging.model_dump(),
-        }
+    def model_dump(self, include_sensitive: bool = False) -> dict[str, Any]:
+        """
+        Dump configuration as dictionary.
+        
+        By default, the root-level api_key field is excluded from the output
+        for security reasons. This prevents accidental exposure of sensitive
+        credentials in logs, metadata snapshots, or serialized configurations.
+        
+        Args:
+            include_sensitive: If True, includes the root-level api_key field.
+                Must be used with caution and only in access-controlled contexts
+                (e.g., secure debugging or testing environments). Defaults to False.
+        
+        Returns:
+            Dictionary containing configuration sections (api, retrieval, paths, etc.).
+            The root-level api_key field is excluded unless include_sensitive=True.
+        """
+        # Use Pydantic's built-in dump, which handles SecretStr redaction
+        exclude_set = set() if include_sensitive else {"api_key"}
+        return super().model_dump(exclude=exclude_set)

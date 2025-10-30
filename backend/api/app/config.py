@@ -2,6 +2,7 @@
 FastAPI application configuration.
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -25,10 +26,15 @@ def _find_project_root() -> Path:
 
 
 def _get_default_qrels_path() -> Path:
-    """Get default qrels path relative to project root."""
+    """Get default qrels path, checking QRELS_PATH env var first."""
+    if qrels_env := os.getenv("QRELS_PATH"):
+        return Path(qrels_env)
     project_root = _find_project_root()
     return (
-        project_root / ".data" / "trec_rag_assets" / "qrels.rag24.test-umbrela-all.txt"
+        project_root
+        / ".data"
+        / "trec_rag_assets"
+        / "qrels.rag24.test-umbrela-all.txt"
     )
 
 

@@ -37,7 +37,7 @@ def run(
         qrels_file = config.get_data_path(config.paths.qrels["rag24"])
 
     try:
-        qrels = load_qrels(qrels_file)
+        qrels, stats = load_qrels(qrels_file)
     except FileNotFoundError:
         console.print(f"[red]Error: Qrels file not found: {qrels_file}[/red]")
         raise typer.Exit(1)
@@ -45,6 +45,12 @@ def run(
         console.print(f"[red]Error loading qrels: {e}[/red]")
         raise typer.Exit(1)
     console.print(f"[cyan]Loaded qrels: {len(qrels.entries)} judgements[/cyan]")
+    if stats["malformed"] > 0 or stats["invalid_relevance"] > 0:
+        console.print(
+            f"[yellow]⚠ Data quality issues: "
+            f"{stats['malformed']} malformed lines, "
+            f"{stats['invalid_relevance']} invalid relevance values skipped[/yellow]"
+        )
 
     # Load run
     try:

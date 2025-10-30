@@ -41,16 +41,29 @@ class Qrels(BaseModel):
         return {entry.query_id for entry in self.entries}
 
 
-def load_qrels(file_path: Path) -> Qrels:
-    """Load TREC qrels file."""
+def load_qrels(file_path: Path) -> tuple[Qrels, dict[str, int]]:
+    """
+    Load TREC qrels file.
+    
+    Args:
+        file_path: Path to the qrels file
+        
+    Returns:
+        Tuple of (Qrels, stats_dict).
+        Stats dict contains:
+        - 'malformed': count of lines with fewer than 3 fields
+        - 'invalid_relevance': count of lines with non-integer relevance values
+    """
     entries = []
+    stats = {"malformed": 0, "invalid_relevance": 0}
 
     try:
         with open(file_path, encoding="utf-8") as f:
             for _line_num, line in enumerate(f, 1):
                 parts = line.strip().split()
                 if len(parts) < 3:
-                    # Silently skip malformed lines
+                    # Track malformed lines
+                    stats["malformed"] += 1
                     continue
                 try:
                     relevance = int(parts[3]) if len(parts) > 3 else 1
@@ -61,11 +74,13 @@ def load_qrels(file_path: Path) -> Qrels:
                     )
                     entries.append(entry)
                 except ValueError:
-                    # Skip lines with non-integer relevance
+                    # Track lines with non-integer relevance
+                    stats["invalid_relevance"] += 1
                     continue
     except FileNotFoundError:
         raise FileNotFoundError(f"Qrels file not found: {file_path}")
     except OSError as e:
         raise RuntimeError(f"Error reading qrels file {file_path}: {e}")
 
-    return Qrels(entries=entries)
+    qrels = Qrels(entries=entries)
+    return qrels, stats

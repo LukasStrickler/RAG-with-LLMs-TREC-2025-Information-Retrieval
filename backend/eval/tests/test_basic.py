@@ -37,9 +37,12 @@ def test_topic_loading():
 def test_qrels_loading():
     """Test qrels loading from fixtures."""
     qrels_path = Path(__file__).parent / "fixtures" / "qrels_sample.txt"
-    qrels = load_qrels(qrels_path)
+    qrels, stats = load_qrels(qrels_path)
     assert len(qrels.entries) > 0
     assert len(qrels.get_query_ids()) > 0
+    assert isinstance(stats, dict)
+    assert "malformed" in stats
+    assert "invalid_relevance" in stats
 
 
 def test_topic_model():

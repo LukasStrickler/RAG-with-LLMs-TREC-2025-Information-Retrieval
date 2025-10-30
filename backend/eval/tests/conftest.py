@@ -42,4 +42,5 @@ def sample_qrels(test_data_dir):
     """Load sample qrels."""
     from eval_cli.io.qrels import load_qrels
 
-    return load_qrels(test_data_dir / "qrels_sample.txt")
+    qrels, _ = load_qrels(test_data_dir / "qrels_sample.txt")
+    return qrels
