@@ -178,16 +178,16 @@ class Config(BaseSettings):
     def model_dump(self, include_sensitive: bool = False) -> dict[str, Any]:
         """
         Dump configuration as dictionary.
-        
+
         By default, the root-level api_key field is excluded from the output
         for security reasons. This prevents accidental exposure of sensitive
         credentials in logs, metadata snapshots, or serialized configurations.
-        
+
         Args:
             include_sensitive: If True, includes the root-level api_key field.
                 Must be used with caution and only in access-controlled contexts
                 (e.g., secure debugging or testing environments). Defaults to False.
-        
+
         Returns:
             Dictionary containing configuration sections (api, retrieval, paths, etc.).
             The root-level api_key field is excluded unless include_sensitive=True.

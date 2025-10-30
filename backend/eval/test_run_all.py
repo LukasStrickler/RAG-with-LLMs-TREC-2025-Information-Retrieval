@@ -21,12 +21,15 @@ console = Console()
 def main():
     """
     Run evaluation for all modes.
-    
+
     Accepts a command-line argument for the topic set (e.g., rag24, rag25)
     with a default value of 'rag24'.
     """
     parser = argparse.ArgumentParser(
-        description="Run evaluation pipeline for all retrieval modes (lexical, vector, hybrid).",
+        description=(
+            "Run evaluation pipeline for all retrieval modes "
+            "(lexical, vector, hybrid)."
+        ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
@@ -39,13 +42,17 @@ def main():
         "topics",
         nargs="?",
         default="rag24",
-        help="Topic set identifier (e.g., rag24, rag25) or path to topic file (default: rag24)",
+        help=(
+            "Topic set identifier (e.g., rag24, rag25) or path to topic file "
+            "(default: rag24)"
+        ),
     )
 
     args = parser.parse_args()
 
     console.print(
-        f"[bold cyan]Starting evaluation pipeline for all modes with topic set: {args.topics}...[/bold cyan]"
+        f"[bold cyan]Starting evaluation pipeline for all modes "
+        f"with topic set: {args.topics}...[/bold cyan]"
     )
 
     try:

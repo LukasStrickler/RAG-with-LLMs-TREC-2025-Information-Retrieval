@@ -31,10 +31,7 @@ def _get_default_qrels_path() -> Path:
         return Path(qrels_env)
     project_root = _find_project_root()
     return (
-        project_root
-        / ".data"
-        / "trec_rag_assets"
-        / "qrels.rag24.test-umbrela-all.txt"
+        project_root / ".data" / "trec_rag_assets" / "qrels.rag24.test-umbrela-all.txt"
     )
 
 

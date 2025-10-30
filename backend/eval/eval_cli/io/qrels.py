@@ -44,10 +44,10 @@ class Qrels(BaseModel):
 def load_qrels(file_path: Path) -> tuple[Qrels, dict[str, int]]:
     """
     Load TREC qrels file.
-    
+
     Args:
         file_path: Path to the qrels file
-        
+
     Returns:
         Tuple of (Qrels, stats_dict).
         Stats dict contains:
