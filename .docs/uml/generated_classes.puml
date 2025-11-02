@@ -21,8 +21,8 @@ class ApiInfoResponse {
   +message: str
   +version: str
   +description: str
-  +docs: list[str, str]
-  +contact: list[str, str]
+  +docs: map<str, str>
+  +contact: map<str, str>
 }
 
 class HealthResponse {
@@ -42,7 +42,7 @@ class ChunkingSpec {
   +chunk_size: int
   +overlap: int
   +tokenizer: str
-  +strategy: list['fixed', 'semantic', 'sliding']
+  +strategy: list
 }
 
 class DatasetSpec {
@@ -114,7 +114,7 @@ class TrecRunRow {
 class RetrievalConfig {
   +mode: enum_IndexKind
   +index_targets: list[IndexTarget]
-  +weights: list[str, float]
+  +weights: map<str, float>
 }
 
 class Query {
@@ -124,17 +124,14 @@ class Query {
 }
 
 class RetrievalRequest {
-  +schema_version: str
-  +dataset_version: str
-  +config_hash: str
-  +config: RetrievalConfig
+  +mode: str
   +queries: list[Query]
 }
 
 class ProvenanceInfo {
   +index_kind: enum_IndexKind
   +index_snapshot: str
-  +score_components: list[str, float]
+  +score_components: map<str, float>
 }
 
 class QueryResult {
@@ -146,7 +143,7 @@ class QueryResult {
 class RetrievalDiagnostics {
   +latency_ms: float
   +config_hash: str
-  +index_versions: list[str, str]
+  +index_versions: map<str, str>
   +warnings: list[str]
 }
 
@@ -161,6 +158,7 @@ class RetrievalResponse {
 class RetrievedSegment {
   +segment_id: str
   +score: float
+  +content: str
   +metadata: SegmentMetadata
   +provenance: ProvenanceInfo
 }
@@ -169,7 +167,7 @@ class SegmentMetadata {
   +title: str | None
   +url: str | None
   +headings: list[str]
-  +extras: list[str, str | int | float | bool]
+  +extras: map<str, str | int | float | bool>
 }
 
 ' Dynamic Relationships
@@ -184,7 +182,6 @@ QueryResult *-- RetrievalDiagnostics
 QueryResult *-- RetrievedSegment
 RetrievalConfig *-- IndexTarget
 RetrievalRequest *-- Query
-RetrievalRequest *-- RetrievalConfig
 RetrievalResponse *-- QueryResult
 RetrievalRun o-- RetrievalRequest
 RetrievalRun o-- RetrievalResponse
