@@ -10,7 +10,7 @@ from eval_cli.io.topics import load_topics
 from eval_cli.models.topics import Topic, TopicSet
 
 
-def test_config_loading():
+def test_config_loading() -> None:
     """Test configuration loading."""
     config = Config.load()
     assert config.api.base_url == "http://localhost:8000"
@@ -19,13 +19,13 @@ def test_config_loading():
     assert "rag25" in config.paths.topics
 
 
-def test_topic_loading():
+def test_topic_loading() -> None:
     """Test topic loading from fixtures."""
-    # Test TREC format
-    trec_path = Path(__file__).parent / "fixtures" / "topics_sample.txt"
-    topic_set = load_topics(trec_path)
+    # Test simple tab-separated format
+    simple_path = Path(__file__).parent / "fixtures" / "topics_sample.txt"
+    topic_set = load_topics(simple_path)
     assert len(topic_set) > 0
-    assert topic_set.format == "trec"
+    assert topic_set.format == "simple"
 
     # Test JSONL format
     jsonl_path = Path(__file__).parent / "fixtures" / "topics_sample.jsonl"
@@ -34,7 +34,7 @@ def test_topic_loading():
     assert topic_set.format == "jsonl"
 
 
-def test_qrels_loading():
+def test_qrels_loading() -> None:
     """Test qrels loading from fixtures."""
     qrels_path = Path(__file__).parent / "fixtures" / "qrels_sample.txt"
     qrels, stats = load_qrels(qrels_path)
@@ -45,14 +45,14 @@ def test_qrels_loading():
     assert "invalid_relevance" in stats
 
 
-def test_topic_model():
+def test_topic_model() -> None:
     """Test topic model functionality."""
     topic = Topic(query_id="1", query="test query", narrative="test narrative")
     assert topic.query_length == 2
     assert topic.query_id == "1"
 
 
-def test_topic_set():
+def test_topic_set() -> None:
     """Test topic set functionality."""
     topics = [
         Topic(query_id="1", query="query 1"),
