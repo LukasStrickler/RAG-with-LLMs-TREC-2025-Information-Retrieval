@@ -180,20 +180,20 @@ class TrecEvalWrapper:
             if not line.strip():
                 continue
             parts = line.split(maxsplit=2)
-                if len(parts) >= 3:
-                    metric_name = parts[0].strip()
-                    query_or_all = parts[1].strip()
-                    try:
-                        value = float(parts[2].strip())
-                    except ValueError as e:
-                        logger.warning(
-                            f"Malformed numeric value in trec_eval output line {line_num}: "
-                            f"metric={metric_name}, raw_value='{parts[2].strip()}', error={e}"
-                        )
-                        continue
+            if len(parts) >= 3:
+                metric_name = parts[0].strip()
+                query_or_all = parts[1].strip()
+                try:
+                    value = float(parts[2].strip())
+                except ValueError as e:
+                    logger.warning(
+                        f"Malformed numeric value in trec_eval output line {line_num}: "
+                        f"metric={metric_name}, raw_value='{parts[2].strip()}', error={e}"
+                    )
+                    continue
 
-                    # Only store the 'all' (system-wide) metrics
-                    if query_or_all == "all":
-                        metrics[metric_name] = value
+                # Only store the 'all' (system-wide) metrics
+                if query_or_all == "all":
+                    metrics[metric_name] = value
 
         return metrics

@@ -35,7 +35,7 @@ class BaselineLoader:
     def get_baseline_stats(self, year: str) -> dict[str, int | float]:
         """Get baseline performance statistics."""
         try:
-        baseline = self.load_baseline(year)
+            baseline = self.load_baseline(year)
         except KeyError:
             raise
 
