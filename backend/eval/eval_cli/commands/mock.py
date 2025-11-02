@@ -136,7 +136,9 @@ def compare(
         raise typer.Exit(1)
 
     if not hasattr(config.mock, "performance_levels"):
-        console.print("[red]Error: Configuration missing 'mock.performance_levels'[/red]")
+        console.print(
+            "[red]Error: Configuration missing 'mock.performance_levels'[/red]"
+        )
         raise typer.Exit(1)
 
     if not isinstance(config.mock.performance_levels, dict):
