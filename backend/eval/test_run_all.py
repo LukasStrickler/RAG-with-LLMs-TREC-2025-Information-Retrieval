@@ -1,24 +1,34 @@
 #!/usr/bin/env python3
 """
 Test script to run evaluation pipeline for all modes.
+
+Integration test script for running the full evaluation pipeline across all
+retrieval modes (lexical, vector, hybrid). This validates that the complete
+workflow executes successfully.
+
+Dependencies:
+- eval_cli.commands.pipeline for pipeline execution
+- Config must be properly set up with data files in expected locations
+- API server should be running for retrieval calls
+
+Note: sys.path manipulation removed - ensure proper package installation via:
+poetry install or pip install -e . from project root
+
+Usage:
+    poetry run python test_run_all.py [rag24|rag25|/path/to/topics]
 """
 import argparse
 import sys
-from pathlib import Path
+import traceback
 
 from rich.console import Console
 
-# Add project root to Python path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
-sys.path.insert(0, str(Path(__file__).parent))
-
-from eval_cli.commands.pipeline import run_all_modes  # noqa: E402
+from eval_cli.commands.pipeline import run_all_modes
 
 console = Console()
 
 
-def main():
+def main() -> int:
     """
     Run evaluation for all modes.
 
@@ -62,8 +72,6 @@ def main():
 
     except Exception as e:
         console.print(f"[bold red]✗ Error: {e}[/bold red]")
-        import traceback
-
         traceback.print_exc()
         return 1
 
