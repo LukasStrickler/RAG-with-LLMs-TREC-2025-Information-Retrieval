@@ -2,6 +2,7 @@
 Benchmarking commands.
 """
 
+import math
 from pathlib import Path
 
 import typer
@@ -9,11 +10,10 @@ from rich.console import Console
 from rich.table import Table
 
 from eval_cli.config import Config
-from eval_cli.io.runs import read_trec_run
 from eval_cli.models.baselines import BaselineComparison, BaselineRun
 from eval_cli.scoring.trec_eval import TrecEvalWrapper
 
-app = typer.Typer(help="Benchmarking commands")
+app: typer.Typer = typer.Typer(help="Benchmarking commands")
 console = Console()
 
 
@@ -23,11 +23,21 @@ def compare(
     year: str = typer.Option("rag24", help="Baseline year (rag24, rag25)"),
 ) -> None:
     """Compare run against organizer baseline."""
-    config = Config.load()
+    try:
+        config = Config.load()
+    except FileNotFoundError as e:
+        console.print(f"[red]Error: Configuration file not found: {e}[/red]")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]Error loading configuration: {e}[/red]")
+        raise typer.Exit(1)
 
-    # Load baseline (not used yet, but loaded for future comparison features)
-    baseline_path = config.get_data_path(config.paths.baselines[year])
-    read_trec_run(baseline_path, f"{year}_baseline")  # Load for validation
+    # Get baseline path (validation happens during evaluation)
+    try:
+        baseline_path = config.get_data_path(config.paths.baselines[year])
+    except KeyError:
+        console.print(f"[red]Error: Baseline not configured for year '{year}'[/red]")
+        raise typer.Exit(1)
 
     # Load qrels
     qrels_rel_path = config.paths.qrels.get(year)
@@ -41,10 +51,20 @@ def compare(
     qrels_path = config.get_data_path(qrels_rel_path)
 
     # Score both runs
-    trec_eval = TrecEvalWrapper(config)
+    try:
+        trec_eval = TrecEvalWrapper(config)
 
-    run_metrics = trec_eval.evaluate(qrels_path, run_file)
-    baseline_metrics = trec_eval.evaluate(qrels_path, baseline_path)
+        run_metrics = trec_eval.evaluate(qrels_path, run_file)
+        baseline_metrics = trec_eval.evaluate(qrels_path, baseline_path)
+    except FileNotFoundError as e:
+        console.print(f"[red]Error: File not found during evaluation: {e}[/red]")
+        raise typer.Exit(1)
+    except RuntimeError as e:
+        console.print(f"[red]Error during evaluation: {e}[/red]")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]Error computing metrics: {e}[/red]")
+        raise typer.Exit(1)
 
     # Create comparison
     comparison = BaselineComparison(
@@ -59,10 +79,12 @@ def compare(
         comparisons={f"{year}_baseline": {}},
     )
 
-    # Compute deltas
+    # Compute deltas once for reuse
+    deltas = {}
     for metric in run_metrics:
         if metric in baseline_metrics:
             delta = run_metrics[metric] - baseline_metrics[metric]
+            deltas[metric] = delta
             comparison.comparisons.setdefault(f"{year}_baseline", {})[metric] = delta
 
     # Print comparison table
@@ -75,28 +97,40 @@ def compare(
 
     for metric in run_metrics:
         if metric in baseline_metrics:
-            delta = run_metrics[metric] - baseline_metrics[metric]
-            pct_change = (
-                (delta / baseline_metrics[metric]) * 100
-                if baseline_metrics[metric] != 0
-                else 0
-            )
+            delta = deltas[metric]  # Reuse precomputed delta
+            if baseline_metrics[metric] == 0:
+                if delta == 0:
+                    pct_str = "0.0%"
+                else:
+                    # Undefined/infinite change from zero baseline
+                    inf_val = math.copysign(float("inf"), delta)
+                    pct_str = "∞" if inf_val > 0 else "-∞"
+            else:
+                pct_change = (delta / baseline_metrics[metric]) * 100
+                pct_str = f"{pct_change:+.1f}%"
 
             table.add_row(
                 metric,
                 f"{run_metrics[metric]:.3f}",
                 f"{baseline_metrics[metric]:.3f}",
                 f"{delta:+.3f}",
-                f"{pct_change:+.1f}%",
+                pct_str,
             )
 
     console.print(table)
 
 
 @app.command()
-def targets():
+def targets() -> None:
     """Show KPI targets from documentation."""
-    config = Config.load()
+    try:
+        config = Config.load()
+    except FileNotFoundError as e:
+        console.print(f"[red]Error: Configuration file not found: {e}[/red]")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]Error loading configuration: {e}[/red]")
+        raise typer.Exit(1)
 
     table = Table(title="KPI Targets (from .docs/KPI.md)")
     table.add_column("Metric", style="cyan")

@@ -7,7 +7,11 @@ from rich.console import Console
 from rich.table import Table
 
 from eval_cli.config import Config
-from eval_cli.models.reports import EvaluationReport, MetricValue
+from eval_cli.models.reports import (
+    EvaluationReport,
+    MetricValue,
+    OverallStatus,
+)
 
 
 class KPIAnalyzer:
@@ -80,7 +84,7 @@ class KPIAnalyzer:
             overall_status=self._determine_overall_status(status_counts),
         )
 
-    def _determine_overall_status(self, status_counts: dict[str, int]) -> str:
+    def _determine_overall_status(self, status_counts: dict[str, int]) -> OverallStatus:
         """Determine overall evaluation status."""
         if status_counts["fail"] > 0:
             return "fail"
@@ -91,7 +95,7 @@ class KPIAnalyzer:
         else:
             return "unknown"
 
-    def print_summary(self, report: EvaluationReport):
+    def print_summary(self, report: EvaluationReport) -> None:
         """Print KPI summary table."""
         console = Console()
 
@@ -118,7 +122,7 @@ class KPIAnalyzer:
                 "warn": "⚠",
                 "fail": "✗",
                 "unknown": "?",
-            }[metric.status]
+            }.get(metric.status, "?")
 
             table.add_row(
                 metric.name,
@@ -138,8 +142,9 @@ class KPIAnalyzer:
             "unknown": "white",
         }
 
+        color = status_colors.get(report.overall_status, "white")
         console.print(
-            f"\n[bold {status_colors[report.overall_status]}]"
+            f"\n[bold {color}]"
             f"Overall Status: {report.overall_status.upper()}"
-            f"[/bold {status_colors[report.overall_status]}]"
+            f"[/bold {color}]"
         )

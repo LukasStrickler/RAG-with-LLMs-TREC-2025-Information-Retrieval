@@ -3,6 +3,7 @@ API client for calling the retrieval API.
 """
 
 import asyncio
+from typing import Literal
 
 import httpx
 from shared.retrieval.request import Query, RetrievalRequest
@@ -11,21 +12,25 @@ from shared.retrieval.response import QueryResult, RetrievalResponse
 from eval_cli.config import Config
 from eval_cli.models.topics import TopicSet
 
+RetrievalMode = Literal["lexical", "vector", "hybrid"]
+
 
 class APIRetrievalClient:
     """Client for calling the retrieval API."""
 
     def __init__(self, config: Config):
         self.base_url = config.api.base_url
-        self.api_key = config.api.api_key or "dev"  # default for dev
+        # Get API key value safely, with default for dev
+        if config.api.api_key:
+            self.api_key = config.api.api_key.get_secret_value()
+        else:
+            self.api_key = "dev"  # default for dev
         self.timeout = config.api.timeout
-        self.max_retries = config.api.max_retries
-        self.concurrency = config.api.concurrency
 
     async def retrieve_batch(
         self,
         topics: TopicSet,
-        mode: str = "hybrid",  # lexical, vector, or hybrid
+        mode: RetrievalMode = "hybrid",
         top_k: int = 100,
     ) -> dict[str, QueryResult]:
         """Retrieve responses for all topics via API."""
@@ -57,12 +62,32 @@ class APIRetrievalClient:
                 f"   npm run backend:dev\n"
                 f"   Original error: {str(e)}"
             ) from e
-        except httpx.HTTPStatusError as e:
+        except httpx.TimeoutException as e:
             raise RuntimeError(
-                f"❌ API server returned error: {e.response.status_code}\n"
-                f"   URL: {e.request.url}\n"
-                f"   Response: {e.response.text[:500]}"
+                f"❌ API request timed out after {self.timeout} seconds\n"
+                f"   Server: {self.base_url}\n"
+                f"   Suggestion: Increase timeout in config or check server load\n"
+                f"   Original error: {str(e)}"
             ) from e
+        except httpx.HTTPStatusError as e:
+            status_code = e.response.status_code
+            if status_code in (401, 403):
+                raise RuntimeError(
+                    f"❌ API authentication failed (status {status_code})\n"
+                    f"   Please verify your API_KEY in backend/eval/.env\n"
+                    f"   Ensure it matches the key configured in the API server\n"
+                    f"   Original error: {str(e)}"
+                ) from e
+            else:
+                response_text = (
+                    e.response.text[:500] if e.response.text else "(no response body)"
+                )
+                raise RuntimeError(
+                    f"❌ API server returned error: {status_code}\n"
+                    f"   URL: {e.request.url}\n"
+                    f"   Response: {response_text}\n"
+                    f"   Original error: {str(e)}"
+                ) from e
 
         # Parse response
         api_response = RetrievalResponse(**response.json())
@@ -73,7 +98,7 @@ class APIRetrievalClient:
     def retrieve_batch_sync(
         self,
         topics: TopicSet,
-        mode: str = "hybrid",
+        mode: RetrievalMode = "hybrid",
         top_k: int = 100,
     ) -> dict[str, QueryResult]:
         """Synchronous wrapper for CLI commands."""

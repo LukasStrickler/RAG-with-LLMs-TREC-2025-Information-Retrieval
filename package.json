@@ -19,10 +19,10 @@
     "format:frontend": "cd frontend && deno task fmt",
     "lint": "npm run lint:backend && npm run lint:frontend",
     "format": "npm run format:backend && npm run format:frontend",
-    "benchmark": "cd backend/eval && poetry run python -m eval_cli.main pipeline run-all rag24 --experiment-id benchmark_all_modes",
-    "benchmark:lexical": "cd backend/eval && poetry run python -m eval_cli.main pipeline run rag24 --mode lexical --experiment-id benchmark_lexical",
-    "benchmark:hybrid": "cd backend/eval && poetry run python -m eval_cli.main pipeline run rag24 --mode hybrid --experiment-id benchmark_hybrid",
-    "benchmark:vector": "cd backend/eval && poetry run python -m eval_cli.main pipeline run rag24 --mode vector --experiment-id benchmark_vector",
+    "benchmark": "cd backend/eval && DEV=1 poetry run eval pipeline run-all rag24 --experiment-id benchmark_all_modes",
+    "benchmark:lexical": "cd backend/eval && DEV=1 poetry run eval pipeline run rag24 --mode lexical --experiment-id benchmark_lexical",
+    "benchmark:hybrid": "cd backend/eval && DEV=1 poetry run eval pipeline run rag24 --mode hybrid --experiment-id benchmark_hybrid",
+    "benchmark:vector": "cd backend/eval && DEV=1 poetry run eval pipeline run rag24 --mode vector --experiment-id benchmark_vector",
     "review": "mkdir -p .review && coderabbit --base main --prompt-only > .review/coderabbit_review_$(date +%Y%m%d_%H%M%S).txt"
   }
 }

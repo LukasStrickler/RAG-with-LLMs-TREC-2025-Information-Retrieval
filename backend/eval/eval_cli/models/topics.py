@@ -2,7 +2,11 @@
 Topic models for TREC evaluation.
 """
 
-from pydantic import BaseModel, Field
+import re
+from collections.abc import Iterator
+from typing import Literal
+
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 
 class Topic(BaseModel):
@@ -15,8 +19,10 @@ class Topic(BaseModel):
 
     @property
     def query_length(self) -> int:
-        """Get query length in words."""
-        return len(self.query.split())
+        """Get query length in words using whitespace-aware tokenization."""
+        # Use regex to count non-whitespace tokens (handles multiple spaces/tabs)
+        tokens = re.findall(r"\S+", self.query)
+        return len(tokens)
 
 
 class TopicSet(BaseModel):
@@ -24,22 +30,27 @@ class TopicSet(BaseModel):
 
     topics: list[Topic]
     source_file: str
-    format: str  # "jsonl" or "trec"
+    format: Literal["jsonl", "trec", "simple"] = Field(description="Topic file format")
+
+    _topic_lookup: dict[str, Topic] = PrivateAttr(default_factory=dict)
+
+    @model_validator(mode="after")
+    def build_lookup(self) -> "TopicSet":
+        """Build O(1) lookup dict after validation."""
+        self._topic_lookup = {topic.query_id: topic for topic in self.topics}
+        return self
 
     def __len__(self) -> int:
         """Get number of topics."""
         return len(self.topics)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Topic]:
         """Iterate over topics."""
         return iter(self.topics)
 
     def get_by_id(self, query_id: str) -> Topic | None:
-        """Get topic by query ID."""
-        for topic in self.topics:
-            if topic.query_id == query_id:
-                return topic
-        return None
+        """Get topic by query ID (O(1) lookup)."""
+        return self._topic_lookup.get(query_id)
 
     @property
     def query_ids(self) -> list[str]:

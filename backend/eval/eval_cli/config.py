@@ -3,18 +3,22 @@ Configuration management for the evaluation CLI.
 """
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+RetrievalMode = Literal["lexical", "vector", "hybrid"]
 
 
 class APIConfig(BaseModel):
     """API configuration."""
 
     base_url: str = Field(default="http://localhost:8000", description="API base URL")
-    api_key: str | None = Field(default=None, description="API key for authentication")
+    api_key: SecretStr | None = Field(
+        default=None, description="API key for authentication"
+    )
     timeout: int = 30
     max_retries: int = 3
     concurrency: int = 5
@@ -23,8 +27,8 @@ class APIConfig(BaseModel):
 class CLIRetrievalConfig(BaseModel):
     """CLI retrieval configuration (different from shared RetrievalConfig)."""
 
-    top_k: int = 100
-    mode: str = "hybrid"  # lexical, vector, hybrid
+    top_k: int = Field(default=100, alias="top_k")
+    mode: RetrievalMode = "hybrid"
 
 
 class PathsConfig(BaseModel):
@@ -98,7 +102,7 @@ class Config(BaseSettings):
     )
 
     # Load API key directly from .env
-    api_key: str | None = Field(default=None, description="API key from .env")
+    api_key: SecretStr | None = Field(default=None, description="API key from .env")
 
     api: APIConfig = Field(default_factory=APIConfig)
     retrieval: CLIRetrievalConfig = Field(default_factory=CLIRetrievalConfig)
@@ -112,19 +116,75 @@ class Config(BaseSettings):
     def load(cls, config_path: Path | None = None) -> "Config":
         """Load configuration from YAML file and environment variables."""
         if config_path is None:
-            # Find config.yaml relative to the eval directory (parent of eval_cli)
-            current_dir = Path(__file__).parent.parent
-            config_path = current_dir / "config.yaml"
+            # First check environment variable
+            import os
+
+            env_config_path = os.getenv("EVAL_CONFIG_PATH")
+            if env_config_path:
+                config_path = Path(env_config_path)
+            else:
+                # Fallback: Find config.yaml relative to the eval directory (parent of eval_cli)
+                # This is a development convenience - in production, EVAL_CONFIG_PATH should be set
+                current_dir = Path(__file__).parent.parent
+                config_path = current_dir / "config.yaml"
+                # Warn if using heuristic in non-dev environment
+                import logging
+
+                dev_mode = os.getenv("DEV", "").lower() in ("1", "true", "yes")
+                if not dev_mode:
+                    logger = logging.getLogger(__name__)
+                    logger.warning(
+                        f"Using heuristic config path: {config_path}. "
+                        "Set EVAL_CONFIG_PATH environment variable for explicit configuration."
+                    )
 
         if not config_path.exists():
-            raise FileNotFoundError(f"Configuration file not found: {config_path}")
+            raise FileNotFoundError(
+                f"Configuration file not found: {config_path}\n"
+                "Please set EVAL_CONFIG_PATH environment variable or provide explicit config_path."
+            )
 
         with open(config_path, encoding="utf-8") as f:
             config_data = yaml.safe_load(f)
 
         # Auto-detect project root if not set
         if not config_data.get("paths", {}).get("project_root"):
-            project_root = cls._find_project_root()
+            import os
+
+            # First check environment variable
+            env_project_root = os.getenv("PROJECT_ROOT")
+            if env_project_root:
+                project_root = Path(env_project_root)
+                # Validate the path exists and contains expected directories
+                if not project_root.exists():
+                    raise RuntimeError(
+                        f"PROJECT_ROOT environment variable points to non-existent path: {project_root}"
+                    )
+                if (
+                    not (project_root / "shared").exists()
+                    or not (project_root / "backend").exists()
+                ):
+                    raise RuntimeError(
+                        f"PROJECT_ROOT path {project_root} does not contain expected 'shared' and 'backend' directories"
+                    )
+            else:
+                # Auto-detect only in development mode
+                dev_mode = os.getenv("DEV", "").lower() in ("1", "true", "yes")
+                if not dev_mode:
+                    raise RuntimeError(
+                        "PROJECT_ROOT environment variable must be set in production. "
+                        "Set DEV=1 to enable auto-detection for development."
+                    )
+                # Auto-detect with validation
+                project_root = cls._find_project_root()
+                # Warn when using auto-detection
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    f"Auto-detected project root: {project_root}. "
+                    "Set PROJECT_ROOT environment variable for explicit configuration."
+                )
             if "paths" not in config_data:
                 config_data["paths"] = {}
             config_data["paths"]["project_root"] = str(project_root)
@@ -134,16 +194,24 @@ class Config(BaseSettings):
 
         # Inject API key from .env into nested api config
         if config_instance.api_key:
-            config_instance.api.api_key = config_instance.api_key
+            config_instance.api.api_key = (
+                config_instance.api_key
+            )  # SecretStr is copied directly
+
+        # Override API base URL from environment variable if set
+        import os
+
+        if api_base_url := os.getenv("API_BASE_URL"):
+            config_instance.api.base_url = api_base_url
 
         return config_instance
 
     @staticmethod
     def _find_project_root() -> Path:
-        """Find project root by looking for pyproject.toml."""
+        """Find project root by looking for 'shared' and 'backend' directories."""
         current = Path(__file__).parent
 
-        # Walk up directories looking for pyproject.toml
+        # Walk up directories looking for project root
         while current != current.parent:
             # Check if this is the main project root (has shared/ directory)
             if (current / "shared").exists() and (current / "backend").exists():
@@ -152,10 +220,9 @@ class Config(BaseSettings):
 
         # No valid project root found - raise explicit error
         error_msg = (
-            f"Could not determine project root. "
+            f"Could not auto-detect project root. "
             f"Tried paths from: {Path(__file__).parent}\n"
-            "Please set PROJECT_ROOT environment variable or "
-            "ensure you're running from the project directory."
+            "Please set PROJECT_ROOT environment variable explicitly."
         )
         raise RuntimeError(error_msg)
 

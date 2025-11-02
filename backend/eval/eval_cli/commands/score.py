@@ -3,6 +3,7 @@ Scoring and evaluation commands.
 """
 
 import json
+import math
 from pathlib import Path
 
 import typer
@@ -12,12 +13,22 @@ from rich.table import Table
 from eval_cli.config import Config
 from eval_cli.io.qrels import load_qrels
 from eval_cli.io.runs import read_trec_run
-from eval_cli.scoring.custom_metrics import compute_coverage_stats, compute_hitrate_10
+from eval_cli.scoring.custom_metrics import compute_hitrate_10
 from eval_cli.scoring.kpi_analyzer import KPIAnalyzer
 from eval_cli.scoring.trec_eval import TrecEvalWrapper
 
 app = typer.Typer(help="Scoring and evaluation commands")
 console = Console()
+
+
+def _resolve_qrels_file(config: Config, qrels_file: Path | None) -> Path:
+    """Resolve qrels file path from config or provided path."""
+    if qrels_file is None:
+        if "rag24" not in config.paths.qrels:
+            console.print("[red]Error: 'rag24' qrels not configured[/red]")
+            raise typer.Exit(1)
+        qrels_file = config.get_data_path(config.paths.qrels["rag24"])
+    return qrels_file
 
 
 @app.command()
@@ -27,14 +38,17 @@ def run(
     output: Path = typer.Option(None, help="Output report file"),
 ) -> None:
     """Score a TREC run."""
-    config = Config.load()
+    try:
+        config = Config.load()
+    except FileNotFoundError as e:
+        console.print(f"[red]Error: Configuration file not found: {e}[/red]")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]Error loading configuration: {e}[/red]")
+        raise typer.Exit(1)
 
     # Load qrels
-    if qrels_file is None:
-        if "rag24" not in config.paths.qrels:
-            console.print("[red]Error: 'rag24' qrels not configured[/red]")
-            raise typer.Exit(1)
-        qrels_file = config.get_data_path(config.paths.qrels["rag24"])
+    qrels_file = _resolve_qrels_file(config, qrels_file)
 
     try:
         qrels, stats = load_qrels(qrels_file)
@@ -73,7 +87,6 @@ def run(
 
     # Compute custom metrics
     hitrate_10 = compute_hitrate_10(trec_run, qrels)
-    compute_coverage_stats(trec_run, qrels)  # Compute for potential future use
 
     # Add custom metrics
     metrics["hitrate_10"] = hitrate_10
@@ -114,7 +127,14 @@ def compare(
     qrels_file: Path = typer.Option(None, help="Qrels file (default: rag24)"),
 ) -> None:
     """Compare two TREC runs."""
-    config = Config.load()
+    try:
+        config = Config.load()
+    except FileNotFoundError as e:
+        console.print(f"[red]Error: Configuration file not found: {e}[/red]")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]Error loading configuration: {e}[/red]")
+        raise typer.Exit(1)
 
     # Load qrels
     if qrels_file is None:
@@ -123,13 +143,31 @@ def compare(
             raise typer.Exit(1)
         qrels_file = config.get_data_path(config.paths.qrels["rag24"])
 
-    # Score both runs
+    # Score both runs with separate error handling
+    trec_eval = TrecEvalWrapper(config)
     try:
-        trec_eval = TrecEvalWrapper(config)
         metrics1 = trec_eval.evaluate(qrels_file, run1)
-        metrics2 = trec_eval.evaluate(qrels_file, run2)
+    except FileNotFoundError as e:
+        console.print(f"[red]Error: Qrels file not found: {e}[/red]")
+        raise typer.Exit(1)
+    except RuntimeError as e:
+        console.print(f"[red]Error evaluating run1 ({run1}): {e}[/red]")
+        raise typer.Exit(1)
     except Exception as e:
-        console.print(f"[red]Error during evaluation: {e}[/red]")
+        console.print(f"[red]Error evaluating run1 ({run1}): {e}[/red]")
+        raise typer.Exit(1)
+
+    try:
+        metrics2 = trec_eval.evaluate(qrels_file, run2)
+    except FileNotFoundError:
+        # Already checked above, but handle anyway
+        console.print("[red]Error: Qrels file not found[/red]")
+        raise typer.Exit(1)
+    except RuntimeError as e:
+        console.print(f"[red]Error evaluating run2 ({run2}): {e}[/red]")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]Error evaluating run2 ({run2}): {e}[/red]")
         raise typer.Exit(1)
 
     # Create comparison table
@@ -143,16 +181,24 @@ def compare(
     for metric in metrics1:
         if metric in metrics2:
             delta = metrics2[metric] - metrics1[metric]
-            pct_change = (
-                (delta / metrics1[metric]) * 100 if metrics1[metric] != 0 else 0
-            )
+            if metrics1[metric] == 0:
+                if delta == 0:
+                    pct_change = 0
+                    pct_str = "0.0%"
+                else:
+                    # Undefined/infinite change from zero baseline
+                    inf_val = math.copysign(float("inf"), delta)
+                    pct_str = "∞" if inf_val > 0 else "-∞"
+            else:
+                pct_change = (delta / metrics1[metric]) * 100
+                pct_str = f"{pct_change:+.1f}%"
 
             table.add_row(
                 metric,
                 f"{metrics1[metric]:.3f}",
                 f"{metrics2[metric]:.3f}",
                 f"{delta:+.3f}",
-                f"{pct_change:+.1f}%",
+                pct_str,
             )
 
     console.print(table)

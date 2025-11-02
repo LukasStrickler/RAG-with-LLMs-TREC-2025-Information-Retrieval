@@ -2,6 +2,9 @@
 Baseline loader for organizer baseline runs.
 """
 
+from collections import Counter
+
+from eval_cli.config import Config
 from eval_cli.io.runs import read_trec_run
 from eval_cli.models.runs import TrecRun
 
@@ -9,7 +12,7 @@ from eval_cli.models.runs import TrecRun
 class BaselineLoader:
     """Load organizer baseline runs for comparison."""
 
-    def __init__(self, config):
+    def __init__(self, config: Config):
         self.config = config
 
     def load_baseline(self, year: str) -> TrecRun:
@@ -28,13 +31,18 @@ class BaselineLoader:
         """Get baseline performance statistics."""
         baseline = self.load_baseline(year)
 
-        # Count queries and documents
-        query_counts = {}
-        for row in baseline.rows:
-            query_counts[row.query_id] = query_counts.get(row.query_id, 0) + 1
+        # Count queries and documents using Counter
+        query_counts = Counter(row.query_id for row in baseline.rows)
+
+        if len(query_counts) == 0:
+            return {
+                "num_queries": 0.0,
+                "avg_docs_per_query": 0.0,
+                "total_docs": 0.0,
+            }
 
         return {
-            "num_queries": len(query_counts),
-            "avg_docs_per_query": sum(query_counts.values()) / len(query_counts),
-            "total_docs": len(baseline.rows),
+            "num_queries": float(len(query_counts)),
+            "avg_docs_per_query": float(sum(query_counts.values()) / len(query_counts)),
+            "total_docs": float(len(baseline.rows)),
         }
