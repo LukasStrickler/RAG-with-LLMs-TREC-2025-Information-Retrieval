@@ -79,7 +79,7 @@ def generate(
         # Convert to serializable format
         responses_json = {qid: resp.model_dump() for qid, resp in responses.items()}
 
-        with open(output, "w") as f:
+        with open(output, "w", encoding="utf-8") as f:
             json.dump(responses_json, f, indent=2)
     except OSError as e:
         console.print(f"[red]Error writing output file to {output}: {e}[/red]")
