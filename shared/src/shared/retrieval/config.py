@@ -2,6 +2,9 @@
 Retrieval configuration models.
 """
 
+import math
+from typing import Self
+
 from pydantic import BaseModel, Field, model_validator
 
 from ..data import IndexTarget
@@ -21,7 +24,7 @@ class RetrievalConfig(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_config(self):
+    def validate_config(self) -> Self:
         """Validate retrieval configuration for completeness and consistency."""
         # Check index_targets is not empty (redundant with min_length but explicit)
         if not self.index_targets:
@@ -50,7 +53,8 @@ class RetrievalConfig(BaseModel):
                     )
 
             # Check not all zeros
-            if sum(self.weights.values()) == 0:
+            total = sum(self.weights.values())
+            if math.isclose(total, 0.0, abs_tol=1e-9):
                 raise ValueError("Weights cannot all be zero")
 
         return self

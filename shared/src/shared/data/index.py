@@ -18,7 +18,7 @@ class IndexTarget(BaseModel):
 
     @field_validator("uri")
     @classmethod
-    def validate_uri(cls, v):
+    def validate_uri(cls: type, v: str) -> str:
         # Accept HTTP URLs or mock:// URIs for testing
         if not (
             v.startswith("http://")
@@ -32,7 +32,7 @@ class IndexTarget(BaseModel):
 
     @field_validator("snapshot_id")
     @classmethod
-    def validate_snapshot_id(cls, v):
+    def validate_snapshot_id(cls: type, v: str) -> str:
         if not re.match(r"^[a-zA-Z0-9_-]+$", v):
             raise ValueError(
                 f"snapshot_id must contain only alphanumeric, underscore, hyphen: {v}"
