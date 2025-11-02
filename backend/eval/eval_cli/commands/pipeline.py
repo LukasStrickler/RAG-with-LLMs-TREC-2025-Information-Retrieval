@@ -215,7 +215,6 @@ def benchmark(
 
     output_dir.mkdir(parents=True, exist_ok=True)
     run_dir = output_dir
-    run_dir.mkdir(parents=True, exist_ok=True)
 
     try:
         if topics in config.paths.topics:
