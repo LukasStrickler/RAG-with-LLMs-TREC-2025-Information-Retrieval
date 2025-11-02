@@ -50,14 +50,6 @@ class MockRetrievalService:
         self.qrels = self._load_qrels(qrels_path)
         self.candidate_docs = self._prepare_candidate_docs()
 
-        # Performance level targets
-        self.performance_levels = {
-            "poor": {"ndcg_10": 0.25, "map_100": 0.20, "mrr_10": 0.35},
-            "baseline": {"ndcg_10": 0.30, "map_100": 0.25, "mrr_10": 0.45},
-            "good": {"ndcg_10": 0.35, "map_100": 0.28, "mrr_10": 0.55},
-            "strong": {"ndcg_10": 0.40, "map_100": 0.32, "mrr_10": 0.65},
-        }
-
         # Score generation parameters
         self.score_range = [0.0, 1.0]
         self.relevance_bias = 0.3
@@ -124,6 +116,7 @@ class MockRetrievalService:
             segment = RetrievedSegment(
                 segment_id=doc_id,
                 score=score,
+                content=f"Mock content for document {doc_id}. This is a placeholder for the actual retrieved segment text content.",
                 metadata=SegmentMetadata(
                     title=f"Mock Document {doc_id}",
                     url=f"https://example.com/doc/{doc_id}",
@@ -175,7 +168,7 @@ class MockRetrievalService:
         # Fallback: generate synthetic IDs when no qrels available
         return [f"segment_{i:06d}" for i in range(1, top_k + 1)]
 
-    def _generate_scores(self, num_docs: int, performance_level: str) -> list[float]:
+    def _generate_scores(self, num_docs: int) -> list[float]:
         """Generate realistic retrieval scores."""
         # Base score range
         min_score, max_score = self.score_range
@@ -209,15 +202,8 @@ class MockRetrievalService:
         self, num_docs: int, mode: Literal["lexical", "vector", "hybrid"]
     ) -> list[float]:
         """Generate scores based on retrieval mode."""
-        if mode == "lexical":
-            # Lexical retrieval: more uniform scores, less precision
-            return self._generate_scores(num_docs, "baseline")
-        elif mode == "vector":
-            # Vector retrieval: higher precision, more varied scores
-            return self._generate_scores(num_docs, "good")
-        else:  # hybrid
-            # Hybrid retrieval: best of both worlds
-            return self._generate_scores(num_docs, "strong")
+        # All modes use the same score generation for mock data
+        return self._generate_scores(num_docs)
 
     def _get_index_kind(
         self, mode: Literal["lexical", "vector", "hybrid"]

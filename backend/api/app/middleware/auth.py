@@ -28,7 +28,10 @@ def get_api_key(api_key: str | None = Security(api_key_header)) -> str:
         str: The validated API key
 
     Raises:
-        HTTPException: 401 if API key is invalid or missing
+        HTTPException: 500 if the server-side API key is not configured (with
+            message: "API key not configured. Please contact administrator.")
+        HTTPException: 401 if the provided X-API-Key is missing or invalid
+            (with message: "Could not validate credentials. Please check your API key.")
     """
     # Validate that API key is configured
     if not settings.api_key.get_secret_value():

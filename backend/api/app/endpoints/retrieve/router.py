@@ -73,10 +73,14 @@ async def retrieve(
         results.append(result)
 
     # Create response with API's own configuration
+    # TODO: Replace hardcoded values with database calls when implementing real retrieval
+    # - schema_version: fetch from DB/config table
+    # - dataset_version: fetch from active dataset configuration
+    # - config_hash: compute from actual config state or fetch from DB
     response = RetrievalResponse(
-        schema_version="1.0",
-        dataset_version="trec_rag_2024",  # API knows what dataset it's using
-        config_hash=f"{request.mode}_config_v1",  # API generates its own config hash
+        schema_version="1.0",  # TODO: Replace with DB call
+        dataset_version="trec_rag_2024",  # TODO: Replace with DB call
+        config_hash=f"{request.mode}_config_v1",  # TODO: Replace with DB call or computed hash
         request_id=str(uuid.uuid4()),
         results=results,
     )

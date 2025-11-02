@@ -21,18 +21,55 @@ def _find_project_root() -> Path:
             return current
         current = current.parent
 
-    # Fallback: return backend/api parent
-    return Path(__file__).parent.parent.parent
+    # Fallback: validate fallback path
+    fallback_path = Path(__file__).parent.parent.parent
+    if (fallback_path / "shared").exists() and (fallback_path / "backend").exists():
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            f"Using fallback project root: {fallback_path}. "
+            "Consider setting PROJECT_ROOT environment variable explicitly."
+        )
+        return fallback_path
+
+    # If fallback also invalid, raise exception
+    raise RuntimeError(
+        f"Could not find project root. Expected directory structure with 'shared/' and 'backend/' "
+        f"subdirectories. Searched up from: {Path(__file__).parent}"
+    )
 
 
 def _get_default_qrels_path() -> Path:
     """Get default qrels path, checking QRELS_PATH env var first."""
     if qrels_env := os.getenv("QRELS_PATH"):
-        return Path(qrels_env)
+        qrels_path = Path(qrels_env)
+        if not qrels_path.exists():
+            raise FileNotFoundError(
+                f"Qrels file from QRELS_PATH does not exist: {qrels_path}"
+            )
+        if not qrels_path.is_file():
+            raise RuntimeError(f"Qrels path from QRELS_PATH is not a file: {qrels_path}")
+        if not os.access(qrels_path, os.R_OK):
+            raise RuntimeError(f"Qrels file from QRELS_PATH is not readable: {qrels_path}")
+        return qrels_path
+
     project_root = _find_project_root()
-    return (
+    default_path = (
         project_root / ".data" / "trec_rag_assets" / "qrels.rag24.test-umbrela-all.txt"
     )
+
+    if not default_path.exists():
+        raise FileNotFoundError(
+            f"Default qrels file not found: {default_path}. "
+            f"Please set QRELS_PATH environment variable or ensure the file exists."
+        )
+    if not default_path.is_file():
+        raise RuntimeError(f"Default qrels path is not a file: {default_path}")
+    if not os.access(default_path, os.R_OK):
+        raise RuntimeError(f"Default qrels file is not readable: {default_path}")
+
+    return default_path
 
 
 class Settings(BaseSettings):
@@ -66,14 +103,24 @@ class Settings(BaseSettings):
     )
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(Path(__file__).resolve().parent / ".env"),
         env_file_encoding="utf-8",
         case_sensitive=False,
     )
 
 
 try:
+    # Validate .env file exists before loading settings
+    env_file_path = Path(__file__).resolve().parent / ".env"
+    if not env_file_path.exists():
+        raise FileNotFoundError(
+            f"Environment file not found: {env_file_path}. "
+            f"Please ensure backend/api/.env exists. See backend/api/.env.example for template."
+        )
     settings = Settings()
+except FileNotFoundError as e:
+    sys.stderr.write(f"{e}\n")
+    sys.exit(1)
 except Exception as e:
     sys.stderr.write(
         f"Configuration Error: {e}\n"
