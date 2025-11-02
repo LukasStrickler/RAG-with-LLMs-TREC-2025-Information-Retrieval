@@ -144,6 +144,9 @@ def baseline(
     except FileNotFoundError as e:
         console.print(f"[red]Error: Baseline file not found: {e}[/red]")
         raise typer.Exit(1)
+    except KeyError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
     except Exception as e:
         console.print(f"[red]Error loading baseline statistics: {e}[/red]")
         raise typer.Exit(1)

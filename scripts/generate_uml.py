@@ -4,7 +4,7 @@ import inspect
 import re
 import importlib
 import pkgutil
-from typing import Any, Dict, List, Set, Tuple, Type
+from typing import List, Set, Tuple, Type
 from enum import Enum
 from pydantic import BaseModel
 
@@ -162,7 +162,6 @@ def generate_model_definitions(models: List[Tuple[str, Type[BaseModel]]]) -> Non
                 
                 # Handle enum types FIRST - before other replacements that might break the format
                 # Enum annotation format: "<enum 'IndexKind'>" or "<enum 'shared.enums.IndexKind'>"
-                import re
                 enum_pattern = r"<enum\s+'([^']+)'>"
                 enum_was_processed = False
                 if re.search(enum_pattern, field_type):
@@ -191,9 +190,19 @@ def generate_model_definitions(models: List[Tuple[str, Type[BaseModel]]]) -> Non
                 
                 # Handle complex types (Dict or List)
                 if "[" in field_type and "]" in field_type:
-                    # Extract the inner types
+                    # Extract the inner types - find matching closing bracket for nested types
                     start_idx = field_type.find("[")
-                    end_idx = field_type.find("]")
+                    # Find the matching closing bracket by counting nested brackets
+                    bracket_count = 0
+                    end_idx = start_idx
+                    for i in range(start_idx, len(field_type)):
+                        if field_type[i] == "[":
+                            bracket_count += 1
+                        elif field_type[i] == "]":
+                            bracket_count -= 1
+                            if bracket_count == 0:
+                                end_idx = i
+                                break
                     inner_content = field_type[start_idx+1:end_idx]
                     
                     if is_dict_type:

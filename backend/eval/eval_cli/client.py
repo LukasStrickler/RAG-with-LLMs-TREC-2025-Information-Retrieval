@@ -6,6 +6,7 @@ import asyncio
 from typing import Literal
 
 import httpx
+from pydantic import ValidationError
 from shared.retrieval.request import Query, RetrievalRequest
 from shared.retrieval.response import QueryResult, RetrievalResponse
 
@@ -90,7 +91,33 @@ class APIRetrievalClient:
                 ) from e
 
         # Parse response
-        api_response = RetrievalResponse(**response.json())
+        try:
+            response_json = response.json()
+        except Exception as json_error:
+            request_url = getattr(response, "url", None) or (
+                response.request.url if hasattr(response, "request") else "unknown"
+            )
+            raise RuntimeError(
+                f"❌ Failed to parse API response as JSON\n"
+                f"   URL: {request_url}\n"
+                f"   Status: {response.status_code}\n"
+                f"   Response text (first 500 chars): {response.text[:500]}\n"
+                f"   JSON parse error: {json_error}"
+            ) from json_error
+
+        try:
+            api_response = RetrievalResponse(**response_json)
+        except ValidationError as validation_error:
+            request_url = getattr(response, "url", None) or (
+                response.request.url if hasattr(response, "request") else "unknown"
+            )
+            raise RuntimeError(
+                f"❌ API response validation failed\n"
+                f"   URL: {request_url}\n"
+                f"   Status: {response.status_code}\n"
+                f"   Validation errors: {validation_error}\n"
+                f"   Response JSON (first 500 chars): {str(response_json)[:500]}"
+            ) from validation_error
 
         # Convert to dict keyed by query_id - each result maps to its own query_id
         return {result.query_id: result for result in api_response.results}

@@ -41,7 +41,6 @@ class RunMetadata(BaseModel):
     retrieval_mode: str
     top_k: int
     num_queries: int
-    performance_level: str | None = None
 
 
 class TrecRun(BaseModel):

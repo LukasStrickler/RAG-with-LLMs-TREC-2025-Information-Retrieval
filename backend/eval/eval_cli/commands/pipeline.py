@@ -15,7 +15,6 @@ from eval_cli.client import APIRetrievalClient
 from eval_cli.config import Config
 from eval_cli.io.runs import build_trec_run, write_trec_run
 from eval_cli.io.topics import load_topics
-from eval_cli.models.reports import EvaluationReport
 from eval_cli.models.runs import RunMetadata
 from eval_cli.scoring.kpi_analyzer import KPIAnalyzer
 from eval_cli.scoring.trec_eval import TrecEvalWrapper
@@ -201,7 +200,7 @@ def benchmark(
     topics: str = typer.Argument(..., help="Topic file (rag24, rag25) or path"),
     output_dir: Path = typer.Option(None, help="Output directory"),
 ) -> None:
-    """Run pipeline with all performance levels and compare."""
+    """Run pipeline benchmark in hybrid mode."""
     try:
         config = Config.load()
     except FileNotFoundError as e:
@@ -215,108 +214,104 @@ def benchmark(
         output_dir = config.get_output_path(f"benchmarks/{topics}")
 
     output_dir.mkdir(parents=True, exist_ok=True)
+    run_dir = output_dir
+    run_dir.mkdir(parents=True, exist_ok=True)
 
-    def run_pipeline_for_level(level: str) -> tuple[dict[str, float], EvaluationReport]:
-        """Helper that mirrors pipeline.run logic for reuse."""
-        run_dir = output_dir / level
-        run_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        if topics in config.paths.topics:
+            topic_path = config.get_data_path(config.paths.topics[topics])
+        else:
+            topic_path = Path(topics)
 
-        try:
-            if topics in config.paths.topics:
-                topic_path = config.get_data_path(config.paths.topics[topics])
-            else:
-                topic_path = Path(topics)
-
-            if not topic_path.exists():
-                raise FileNotFoundError(f"Topic file not found: {topic_path}")
-
-            topic_set = load_topics(topic_path)
-            client = APIRetrievalClient(config)
-            # Note: performance_level is not supported by APIRetrievalClient
-            # This may need to be handled differently for mock scenarios
-            responses = client.retrieve_batch_sync(topic_set, mode="hybrid", top_k=100)
-        except FileNotFoundError as e:
-            raise RuntimeError(f"Error loading topics: {e}") from e
-        except RuntimeError:
-            raise
-        except Exception as e:
-            raise RuntimeError(f"Error in pipeline execution: {e}") from e
-
-        run_id = f"benchmark_{topics}_{level}"
-        metadata = RunMetadata(
-            run_id=run_id,
-            config_snapshot=config.model_dump(),
-            topic_source=str(topic_path),
-            retrieval_mode="mock",
-            top_k=100,
-            num_queries=len(topic_set),
-            performance_level=level,
-        )
-
-        try:
-            trec_run = build_trec_run(responses, run_id, metadata)
-            run_file = run_dir / f"{run_id}.tsv"
-            write_trec_run(trec_run, run_file)
-        except Exception as e:
-            raise RuntimeError(f"Error building/writing TREC run: {e}") from e
-
-        qrels_rel_path = config.paths.qrels.get(topics)
-        if not qrels_rel_path:
-            available = list(config.paths.qrels.keys())
-            raise RuntimeError(
-                f"No qrels configured for topics='{topics}'. " f"Available: {available}"
-            )
-        qrels_path = config.get_data_path(qrels_rel_path)
-        try:
-            trec_eval = TrecEvalWrapper(config)
-            metrics = trec_eval.evaluate(qrels_path, run_file)
-            analyzer = KPIAnalyzer(config)
-            report = analyzer.create_report(metrics)
-            analyzer.print_summary(report)
-        except (FileNotFoundError, RuntimeError) as e:
-            raise RuntimeError(f"Error during evaluation: {e}") from e
-        except Exception as e:
-            raise RuntimeError(f"Error computing metrics: {e}") from e
-
-        report_file = run_dir / f"{run_id}_report.json"
-        try:
-            with open(report_file, "w", encoding="utf-8") as f:
-                json.dump(report.model_dump(), f, indent=2, default=str)
-        except OSError as e:
-            raise RuntimeError(f"Error writing report file: {e}") from e
-
-        return metrics, report
-
-    # Run all performance levels
-    results = {}
-    for level in config.mock.performance_levels:
-        console.print(f"\n[cyan]Running {level} performance level...[/cyan]")
-        try:
-            metrics, _ = run_pipeline_for_level(level)
-            results[level] = {
-                display_name: metrics.get(metric_key, 0.0)
-                for display_name, metric_key in COMPARISON_METRICS.items()
-            }
-        except Exception as e:
-            console.print(f"[red]Error running {level} performance level: {e}[/red]")
+        if not topic_path.exists():
+            console.print(f"[red]Error: Topic file not found: {topic_path}[/red]")
             raise typer.Exit(1)
 
-    # Create comparison table
-    table = Table(title="Performance Level Comparison")
-    table.add_column("Level", style="cyan")
-    table.add_column("nDCG@10", style="green", justify="right")
-    table.add_column("MAP@100", style="blue", justify="right")
-    table.add_column("MRR@10", style="yellow", justify="right")
+        topic_set = load_topics(topic_path)
+        client = APIRetrievalClient(config)
+        responses = client.retrieve_batch_sync(topic_set, mode="hybrid", top_k=100)
+    except FileNotFoundError as e:
+        console.print(f"[red]Error: Topic file not found: {e}[/red]")
+        raise typer.Exit(1)
+    except RuntimeError as e:
+        console.print(f"[red]API Error: {e}[/red]")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]Error in pipeline execution: {e}[/red]")
+        raise typer.Exit(1)
 
-    for level, metrics in results.items():
-        table.add_row(
-            level.title(),
-            f"{metrics['ndcg_10']:.3f}",
-            f"{metrics['map_100']:.3f}",
-            f"{metrics['mrr_10']:.3f}",
+    run_id = f"benchmark_{topics}"
+    metadata = RunMetadata(
+        run_id=run_id,
+        config_snapshot=config.model_dump(),
+        topic_source=str(topic_path),
+        retrieval_mode="hybrid",
+        top_k=100,
+        num_queries=len(topic_set),
+    )
+
+    try:
+        trec_run = build_trec_run(responses, run_id, metadata)
+        run_file = run_dir / f"{run_id}.tsv"
+        write_trec_run(trec_run, run_file)
+    except Exception as e:
+        console.print(f"[red]Error building/writing TREC run: {e}[/red]")
+        raise typer.Exit(1)
+
+    qrels_rel_path = config.paths.qrels.get(topics)
+    if not qrels_rel_path:
+        available = list(config.paths.qrels.keys())
+        console.print(
+            f"[red]No qrels configured for topics='{topics}'. Available: {available}[/red]"
         )
+        raise typer.Exit(1)
+    qrels_path = config.get_data_path(qrels_rel_path)
+    try:
+        trec_eval = TrecEvalWrapper(config)
+        metrics = trec_eval.evaluate(qrels_path, run_file)
+        analyzer = KPIAnalyzer(config)
+        report = analyzer.create_report(metrics)
+        analyzer.print_summary(report)
+    except FileNotFoundError as e:
+        console.print(f"[red]Error: Qrels file not found: {e}[/red]")
+        raise typer.Exit(1)
+    except RuntimeError as e:
+        console.print(f"[red]Error during evaluation: {e}[/red]")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]Error computing metrics: {e}[/red]")
+        raise typer.Exit(1)
 
+    report_file = run_dir / f"{run_id}_report.json"
+    try:
+        with open(report_file, "w", encoding="utf-8") as f:
+            json.dump(report.model_dump(), f, indent=2, default=str)
+    except OSError as e:
+        console.print(f"[red]Error writing report file: {e}[/red]")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]Error saving report: {e}[/red]")
+        raise typer.Exit(1)
+
+    # Display results table
+    table = Table(title=f"Benchmark Results ({topics.upper()})")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="green", justify="right")
+
+    # Add key metrics to table
+    key_metrics = {
+        "nDCG@10": COMPARISON_METRICS["ndcg_10"],
+        "MAP@100": COMPARISON_METRICS["map_100"],
+        "MRR@10": COMPARISON_METRICS["mrr_10"],
+    }
+
+    for display_name, metric_key in key_metrics.items():
+        value = metrics.get(metric_key, 0.0)
+        table.add_row(display_name, f"{value:.3f}")
+
+    console.print("\n")
     console.print(table)
+    console.print(f"\n[green]✓ Benchmark completed: {run_id}[/green]")
 
 
 @app.command("run-all")
@@ -532,18 +527,32 @@ def list_experiments(
             # Parse experiment name to extract info
             # Expected format: [topics]_[mode]_[timestamp] (3 parts)
             # or [experiment_id]_[topics]_[mode]_[timestamp] (4 parts)
-            parts = exp_name.split("_")
-            if len(parts) in (3, 4):
-                if len(parts) == 4:
-                    exp_id, exp_topics, exp_mode, timestamp = parts
-                else:
+            # Timestamp spans two tokens (e.g., "20251027_121212")
+            parts = exp_name.rsplit("_", 2)
+            if len(parts) == 3:
+                # Parse from right: last two tokens are timestamp
+                timestamp = "_".join(parts[-2:])
+                prefix_parts = parts[0].split("_")
+
+                if len(prefix_parts) == 2:
+                    # Format: [topics]_[mode]_[timestamp]
                     exp_id = None
-                    exp_topics, exp_mode, timestamp = parts
+                    exp_topics, exp_mode = prefix_parts
+                elif len(prefix_parts) == 3:
+                    # Format: [experiment_id]_[topics]_[mode]_[timestamp]
+                    exp_id, exp_topics, exp_mode = prefix_parts
+                else:
+                    # Unexpected format - warn and skip
+                    console.print(
+                        f"[dim yellow]Warning: Skipping experiment '{exp_name}' - "
+                        f"unexpected format (expected 3 or 4 underscore-separated parts before timestamp)[/dim yellow]"
+                    )
+                    continue
             else:
                 # Unexpected format - warn and skip
                 console.print(
                     f"[dim yellow]Warning: Skipping experiment '{exp_name}' - "
-                    f"unexpected format (expected 3 or 4 underscore-separated parts, got {len(parts)})[/dim yellow]"
+                    f"unexpected format (expected timestamp in format YYYYMMDD_HHMMSS)[/dim yellow]"
                 )
                 continue
 

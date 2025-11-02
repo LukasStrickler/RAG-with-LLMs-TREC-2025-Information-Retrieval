@@ -17,6 +17,11 @@ class BaselineLoader:
 
     def load_baseline(self, year: str) -> TrecRun:
         """Load organizer baseline run."""
+        if year not in self.config.paths.baselines:
+            available_years = list(self.config.paths.baselines.keys())
+            raise KeyError(
+                f"Unknown baseline year '{year}'. Available years: {available_years}"
+            )
         baseline_path = self.config.get_data_path(self.config.paths.baselines[year])
 
         if not baseline_path.exists():
@@ -27,9 +32,12 @@ class BaselineLoader:
 
         return read_trec_run(baseline_path, run_id)
 
-    def get_baseline_stats(self, year: str) -> dict[str, float]:
+    def get_baseline_stats(self, year: str) -> dict[str, int | float]:
         """Get baseline performance statistics."""
-        baseline = self.load_baseline(year)
+        try:
+            baseline = self.load_baseline(year)
+        except KeyError:
+            raise
 
         # Count queries and documents using Counter
         query_counts = Counter(row.query_id for row in baseline.rows)

@@ -31,7 +31,7 @@ npm run backend:dev  # In project root
 
 ### 2. Basic Usage
 
-**Option A: Using npm scripts (Recommended)**
+#### Option A: Using npm scripts (Recommended)
 
 ```bash
 # From project root - handles Poetry environment automatically
@@ -41,7 +41,7 @@ npm run benchmark:hybrid            # Run hybrid retrieval only
 npm run benchmark:vector            # Run vector retrieval only
 ```
 
-**Option B: Using poetry directly**
+#### Option B: Using poetry directly
 
 ```bash
 # Run evaluation for a single mode
@@ -61,7 +61,7 @@ poetry run eval pipeline compare experiment1 experiment2
 
 ### Directory Structure
 
-```
+```text
 backend/eval/
 ├── eval_cli/                    # CLI implementation
 │   ├── main.py                 # CLI entrypoint
@@ -321,7 +321,7 @@ Each experiment generates KPI reports showing:
 
 Experiments are organized with timestamps for easy comparison:
 
-```
+```text
 artifacts/
 └── experiments/
     └── baseline_v1_rag24_20251024_183800/
@@ -342,7 +342,7 @@ artifacts/
 
 The CLI communicates with the retrieval API server:
 
-```
+```text
 ┌─────────────┐         ┌──────────────┐
 │  Eval CLI   │────────▶│  API Server  │
 │             │ Request │              │

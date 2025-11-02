@@ -73,13 +73,13 @@ download_file() {
   tmp_file="$(mktemp)"
   
   # Setup cleanup trap to remove temp file on exit/failure
-  trap "rm -f '${tmp_file}'" EXIT ERR INT TERM
+  trap "rm -f \"${tmp_file}\"" EXIT ERR INT TERM
   
   # Download with error handling
   if ! curl -fL --header "Accept: application/octet-stream" "${url}" -o "${tmp_file}" 2>&1; then
     echo "✗ Error: Failed to download ${label} from ${url}" >&2
     rm -f "${tmp_file}"
-    trap - EXIT ERR INT TERM
+    trap "rm -f \"${tmp_file}\"" EXIT ERR INT TERM
     return 1
   fi
   
@@ -87,12 +87,12 @@ download_file() {
   if ! mv "${tmp_file}" "${target}"; then
     echo "✗ Error: Failed to move ${label} to ${target}" >&2
     rm -f "${tmp_file}"
-    trap - EXIT ERR INT TERM
+    trap "rm -f \"${tmp_file}\"" EXIT ERR INT TERM
     return 1
   fi
   
   # Clear trap on success
-  trap - EXIT ERR INT TERM
+  trap "rm -f \"${tmp_file}\"" EXIT ERR INT TERM
   echo "✓ Saved ${label} to ${target}"
 }
 

@@ -22,9 +22,6 @@ console = Console()
 def generate(
     topics: str = typer.Argument(..., help="Topic file (rag24, rag25) or path"),
     output: Path = typer.Option(None, help="Output file for responses"),
-    performance: str = typer.Option(
-        "baseline", help="Performance level (poor, baseline, good, strong)"
-    ),
     top_k: int = typer.Option(100, help="Number of results per query"),
 ) -> None:
     """Generate mock retrieval responses via API."""
@@ -61,8 +58,8 @@ def generate(
         client = APIRetrievalClient(config)
         responses = client.retrieve_batch_sync(
             topic_set,
-            performance,
-            top_k,
+            mode="hybrid",
+            top_k=top_k,
         )
     except Exception as e:
         console.print(
@@ -74,7 +71,7 @@ def generate(
 
     # Save responses
     if output is None:
-        output = config.get_output_path(f"mock_responses_{topics}_{performance}.json")
+        output = config.get_output_path(f"mock_responses_{topics}.json")
 
     try:
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -114,7 +111,7 @@ def baseline(
 
         console.print(table)
 
-    except FileNotFoundError as e:
+    except (FileNotFoundError, KeyError) as e:
         console.print(f"[red]Error: {e}[/red]")
         raise typer.Exit(1)
 

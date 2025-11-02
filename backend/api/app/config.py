@@ -22,7 +22,7 @@ def _find_project_root() -> Path:
         current = current.parent
 
     # Fallback: validate fallback path
-    fallback_path = Path(__file__).parent.parent.parent
+    fallback_path = Path(__file__).parent.parent.parent.parent
     if (fallback_path / "shared").exists() and (fallback_path / "backend").exists():
         import logging
 
