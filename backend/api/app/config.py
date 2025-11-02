@@ -35,8 +35,9 @@ def _find_project_root() -> Path:
 
     # If fallback also invalid, raise exception
     raise RuntimeError(
-        f"Could not find project root. Expected directory structure with 'shared/' and 'backend/' "
-        f"subdirectories. Searched up from: {Path(__file__).parent}"
+        f"Could not find project root. Expected directory structure with "
+        f"'shared/' and 'backend/' subdirectories. "
+        f"Searched up from: {Path(__file__).parent}"
     )
 
 
@@ -49,9 +50,13 @@ def _get_default_qrels_path() -> Path:
                 f"Qrels file from QRELS_PATH does not exist: {qrels_path}"
             )
         if not qrels_path.is_file():
-            raise RuntimeError(f"Qrels path from QRELS_PATH is not a file: {qrels_path}")
+            raise RuntimeError(
+                f"Qrels path from QRELS_PATH is not a file: {qrels_path}"
+            )
         if not os.access(qrels_path, os.R_OK):
-            raise RuntimeError(f"Qrels file from QRELS_PATH is not readable: {qrels_path}")
+            raise RuntimeError(
+                f"Qrels file from QRELS_PATH is not readable: {qrels_path}"
+            )
         return qrels_path
 
     project_root = _find_project_root()
@@ -115,7 +120,8 @@ try:
     if not env_file_path.exists():
         raise FileNotFoundError(
             f"Environment file not found: {env_file_path}. "
-            f"Please ensure backend/api/.env exists. See backend/api/.env.example for template."
+            f"Please ensure backend/api/.env exists. "
+            f"See backend/api/.env.example for template."
         )
     settings = Settings()
 except FileNotFoundError as e:

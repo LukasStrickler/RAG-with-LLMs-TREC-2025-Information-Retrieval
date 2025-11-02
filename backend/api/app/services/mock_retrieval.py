@@ -116,7 +116,11 @@ class MockRetrievalService:
             segment = RetrievedSegment(
                 segment_id=doc_id,
                 score=score,
-                content=f"Mock content for document {doc_id}. This is a placeholder for the actual retrieved segment text content.",
+                content=(
+                    f"Mock content for document {doc_id}. "
+                    f"This is a placeholder for the actual retrieved "
+                    f"segment text content."
+                ),
                 metadata=SegmentMetadata(
                     title=f"Mock Document {doc_id}",
                     url=f"https://example.com/doc/{doc_id}",
