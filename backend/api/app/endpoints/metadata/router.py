@@ -2,6 +2,8 @@
 Metadata endpoint.
 """
 
+from typing import Any
+
 from fastapi import APIRouter, Depends
 
 # Import shared models
@@ -28,7 +30,7 @@ router = APIRouter()
     ),
     response_description="Complete configuration metadata from database",
 )
-async def get_metadata(api_key: str = Depends(get_api_key)):
+async def get_metadata(api_key: str = Depends(get_api_key)) -> dict[str, Any]:
     """
     Get all current configuration metadata from the database.
 

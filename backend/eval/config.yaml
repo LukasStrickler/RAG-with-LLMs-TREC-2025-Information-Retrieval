@@ -1,0 +1,77 @@
+# Evaluation CLI Configuration
+# API settings are loaded from backend/eval/.env
+# See .env for API_BASE_URL, API_KEY, API_TIMEOUT, etc.
+api:
+  timeout: 30
+  max_retries: 3
+  concurrency: 5
+
+retrieval:
+  modes: [lexical, vector, hybrid]
+  default_mode: hybrid
+  top_k: 100
+
+paths:
+  # Absolute path to project root (auto-detected)
+  project_root: null
+  
+  # Data directory (relative to project root)
+  data_dir: ".data/trec_rag_assets"
+  
+  # Output directory (relative to project root)
+  output_dir: "backend/eval/artifacts"
+  
+  # Topic files (relative to data_dir)
+  topics:
+    rag24: "topics.rag24.test.txt"
+    rag25: "trec_rag_2025_queries.jsonl"
+  
+  # Qrels files (relative to data_dir)
+  qrels:
+    rag24: "qrels.rag24.test-umbrela-all.txt"
+    rag25: null  # Organizer qrels pending; CLI guards and prompts for override
+  
+  # Baseline runs (relative to data_dir)
+  baselines:
+    rag24: "fs4_bm25+rocchio_snowael_snowaem_gtel+monot5_rrf+rz_rrf.rag24.test.txt"
+    rag25: "run.rankqwen3_32b.rag25.txt"
+
+metrics:
+  primary: "ndcg_cut_10"
+  cutoffs: [10, 25, 50, 100]
+  targets:
+    ndcg_cut_10: 0.30
+    ndcg_cut_25: 0.32
+    ndcg_cut_50: 0.30
+    ndcg_cut_100: 0.28
+    map_cut_100: 0.25
+    recip_rank: 0.45
+    recall_25: 0.55
+    recall_50: 0.60
+    recall_100: 0.62
+    hitrate_10: 0.70
+  # Custom metrics are computed via post-processing (not by trec_eval binary)
+  # These metrics are calculated separately from trec_eval metrics
+  custom:
+    - "hitrate_10"  # Binary success in top 10 - computed from run file and qrels
+
+trec_eval:
+  binary_path: "trec_eval"
+  flags: ["-c"]
+  # Metrics computed by trec_eval binary (standard IR metrics)
+  # Note: Custom metrics like hitrate_10 are computed separately via post-processing
+  metrics:
+    - "ndcg_cut.10"
+    - "ndcg_cut.25"
+    - "ndcg_cut.50"
+    - "ndcg_cut.100"
+    - "map_cut.100"
+    - "recip_rank"
+    - "recall.25"
+    - "recall.50"
+    - "recall.100"
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+

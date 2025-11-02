@@ -33,6 +33,7 @@ class RetrievedSegment(BaseModel):
 
     segment_id: str = Field(..., description="Segment identifier")
     score: float = Field(..., description="Retrieval score")
+    content: str = Field(..., description="Retrieved segment content/text")
     metadata: SegmentMetadata = Field(..., description="Segment metadata")
     provenance: ProvenanceInfo = Field(..., description="Provenance information")
 

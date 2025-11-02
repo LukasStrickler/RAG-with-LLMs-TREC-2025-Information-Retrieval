@@ -4,19 +4,13 @@ Retrieval endpoint.
 
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 # Import shared models
 from shared import (
-    ProvenanceInfo,
-    QueryResult,
-    RetrievalDiagnostics,
     RetrievalRequest,
     RetrievalResponse,
-    RetrievedSegment,
-    SegmentMetadata,
 )
-from shared.enums import IndexKind
 
 from app.middleware.auth import get_api_key
 
@@ -27,79 +21,67 @@ router = APIRouter()
     "/retrieve",
     response_model=RetrievalResponse,
     summary="Document Retrieval",
-    description=(
-        "Unified endpoint for document retrieval supporting single and batch queries"
-    ),
+    description="Simple document retrieval endpoint",
     response_description="Ranked retrieval results with metadata and diagnostics",
 )
-async def retrieve(request: RetrievalRequest, api_key: str = Depends(get_api_key)):
+async def retrieve(
+    app_request: Request,
+    request: RetrievalRequest,
+    api_key: str = Depends(get_api_key),
+) -> RetrievalResponse:
     """
-    Retrieve documents for given queries using specified retrieval configuration.
+    Retrieve documents for given queries using specified retrieval mode.
 
-    This is the main retrieval endpoint that supports:
-    - **Single queries** - Process one query at a time
-    - **Batch queries** - Process multiple queries in a single request
-    - **Multiple retrieval modes** - Lexical (BM25), semantic (vector), and hybrid
-    - **Configurable indexes** - Support for multiple index targets with weights
-
-    The endpoint returns ranked results with detailed metadata, provenance information,
-    and performance diagnostics for each query.
+    TODO: REPLACE WITH REAL RETRIEVAL IMPLEMENTATION
+    Currently returns mock data for development/testing.
+    When implementing:
+    - Connect to actual BM25 index for lexical mode
+    - Connect to vector store for semantic mode
+    - Implement fusion logic for hybrid mode
+    - Use real document retrieval and scoring
 
     Args:
-        request: RetrievalRequest containing queries and configuration
+        app_request: FastAPI request object to access app state
+        request: RetrievalRequest with mode and queries
         api_key: API key for authentication
 
     Returns:
         RetrievalResponse: Contains ranked results for each query with diagnostics
 
     Raises:
-        HTTPException: If authentication fails or request validation fails
+        HTTPException: 503 if retrieval service is not available
     """
 
-    # TODO: Replace mock retrieval with service layer adapter
-    # (config -> retrieval service -> BM25/vector stores)
+    # TODO: Replace with real retrieval service
+    # This is currently using mock data for development/testing
+    mock_service = getattr(app_request.app.state, "mock_service", None)
+    if not mock_service:
+        raise HTTPException(
+            status_code=503,
+            detail="Retrieval service not available. Please contact administrator.",
+        )
+
     # Generate mock results for each query
     results = []
     for query in request.queries:
-        # Create mock segments with realistic scores
-        segments = []
-        for i, score in enumerate([0.95, 0.87, 0.72]):
-            segment = RetrievedSegment(
-                segment_id=f"msmarco_doc_{i+1:02d}_{query.query_id}",
-                score=score,
-                metadata=SegmentMetadata(
-                    title=f"Mock Document {i+1}",
-                    url=f"https://example.com/doc{i+1}",
-                    headings=[f"Section {i+1}"],
-                    extras={"source": "mock"},
-                ),
-                provenance=ProvenanceInfo(
-                    index_kind=IndexKind.HYBRID,
-                    index_snapshot="mock_snapshot_001",
-                    score_components={"lexical": score * 0.6, "semantic": score * 0.4},
-                ),
-            )
-            segments.append(segment)
-
-        # Create diagnostics with realistic performance metrics
-        diagnostics = RetrievalDiagnostics(
-            latency_ms=75.5,
-            config_hash=request.config_hash,
-            index_versions={"lexical": "v1.0", "vector": "v1.0"},
-            warnings=[],
-        )
-
-        # Create query result
-        result = QueryResult(
-            query_id=query.query_id, segments=segments, diagnostics=diagnostics
+        result = mock_service.generate_response(
+            query_id=query.query_id,
+            query_text=query.query_text,
+            top_k=query.top_k,
+            mode=request.mode,  # Use the mode from the request
         )
         results.append(result)
 
-    # Create response with unique request ID
+    # Create response with API's own configuration
+    # TODO: Replace hardcoded values with database calls when
+    # implementing real retrieval
+    # - schema_version: fetch from DB/config table
+    # - dataset_version: fetch from active dataset configuration
+    # - config_hash: compute from actual config state or fetch from DB
     response = RetrievalResponse(
-        schema_version=request.schema_version,
-        dataset_version=request.dataset_version,
-        config_hash=request.config_hash,
+        schema_version="1.0",  # TODO: Replace with DB call
+        dataset_version="trec_rag_2024",  # TODO: Replace with DB call
+        config_hash=(f"{request.mode}_config_v1"),  # TODO: Replace with DB call or hash
         request_id=str(uuid.uuid4()),
         results=results,
     )

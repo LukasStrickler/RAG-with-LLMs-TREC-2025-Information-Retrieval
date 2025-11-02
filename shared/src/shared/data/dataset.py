@@ -2,6 +2,7 @@
 Dataset and chunking specifications.
 """
 
+from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel, Field, HttpUrl, model_validator
@@ -13,10 +14,9 @@ class DatasetSpec(BaseModel):
     name: str = Field(..., description="Dataset name")
     version: str = Field(..., description="Dataset version")
     split: str | None = Field(None, description="Dataset split (train/dev/test)")
-    release_date: str = Field(
+    release_date: date = Field(
         ...,
-        pattern=r"^\d{4}-\d{2}-\d{2}$",
-        description="Dataset release date (YYYY-MM-DD)",
+        description="Dataset release date",
     )
     source_uri: HttpUrl = Field(..., description="Source URI for dataset")
 

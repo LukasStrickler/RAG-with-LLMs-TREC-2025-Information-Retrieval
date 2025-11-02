@@ -1,13 +1,8 @@
 """
-FastAPI application main module.
+FastAPI application package public API.
 
-This module provides the core FastAPI application instance and configuration
-for the TREC 2025 Information Retrieval API. It includes:
-
-- FastAPI app instance with CORS middleware
-- Settings configuration from environment variables
-- Endpoint routers for health, metadata, and retrieval
-- API documentation and contact information
+This module serves as a consolidation and re-export point for the package public API,
+exposing the main application instance and configuration settings.
 
 Public API:
 - app: FastAPI application instance

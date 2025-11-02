@@ -3,6 +3,22 @@ title Core Types — Simplified Interface Diagram
 
 ' Note: HttpUrl refers to Pydantic's validated URL type (not unconstrained string)
 
+package "Enums" {
+  enum IndexKind {
+    LEXICAL
+    VECTOR
+    HYBRID
+  }
+  enum MetricName {
+    NDCG_AT_10
+    MAP_AT_100
+    MRR_AT_10
+    RECALL_AT_50
+    RECALL_AT_100
+    HIT_RATE_AT_10
+  }
+}
+
 class DatasetSpec {
   +name: str
   +version: str
@@ -12,17 +28,9 @@ class DatasetSpec {
 }
 
 class IndexTarget {
-  +kind: enum{bm25,vector,hybrid}
+  +kind: IndexKind
   +uri: str
   +snapshot_id: str
-}
-
-
-class SegmentMetadata {
-  +title: str?
-  +url: str?
-  +headings: [str]
-  +extras: Map<str,str|int|float|bool>
 }
 
 class ChunkingSpec {
@@ -32,8 +40,15 @@ class ChunkingSpec {
   +strategy: str
 }
 
+class SegmentMetadata {
+  +title: str?
+  +url: str?
+  +headings: [str]
+  +extras: Map<str,str|int|float|bool>
+}
+
 class ProvenanceInfo {
-  +index_kind: enum{bm25,vector,hybrid}
+  +index_kind: IndexKind
   +index_snapshot: str
   +score_components: Map<str,float>
 }
@@ -41,6 +56,7 @@ class ProvenanceInfo {
 class RetrievedSegment {
   +segment_id: str
   +score: float
+  +content: str
   +metadata: SegmentMetadata
   +provenance: ProvenanceInfo
 }
@@ -53,7 +69,7 @@ class RetrievalDiagnostics {
 }
 
 class RetrievalConfig {
-  +mode: enum{lexical,dense,hybrid}
+  +mode: IndexKind
   +index_targets: [IndexTarget]
   +weights: Map<str,float>?
 }
@@ -65,10 +81,7 @@ class Query {
 }
 
 class RetrievalRequest {
-  +schema_version: str
-  +dataset_version: str
-  +config_hash: str
-  +config: RetrievalConfig
+  +mode: str
   +queries: [Query] (1..*)
 }
 
@@ -87,6 +100,10 @@ class RetrievalResponse {
 }
 
 
+class TrecRun {
+  +rows: list[TrecRunRow]
+}
+
 class TrecRunRow {
   +topic_id: str
   +q0: "Q0"
@@ -97,7 +114,7 @@ class TrecRunRow {
 }
 
 class MetricValue {
-  +name: enum{ndcg@10,map@100,...}
+  +name: MetricName
   +value: float
   +higher_is_better: bool
   +target: float?
@@ -136,7 +153,6 @@ class ExperimentManifest {
 }
 
 RetrievalConfig *-- IndexTarget
-RetrievalRequest *-- RetrievalConfig
 RetrievalRequest "1" *-- "1..*" Query
 RetrievedSegment *-- SegmentMetadata
 RetrievedSegment *-- ProvenanceInfo
@@ -149,10 +165,10 @@ EvaluationReport *-- RetrievalRun
 EvaluationReport *-- MetricValue
 EvaluationReport *-- EvaluationDiagnostics
 ExperimentManifest *-- MetricValue
+TrecRun *-- TrecRunRow
 
 DatasetSpec --> IndexTarget : indexes built from
 ChunkingSpec --> IndexTarget : indexes built from
-
 TrecRunRow --> RetrievedSegment : materialises from
 
 

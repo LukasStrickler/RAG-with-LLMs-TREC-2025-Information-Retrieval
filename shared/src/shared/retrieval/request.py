@@ -4,8 +4,6 @@ Retrieval request models.
 
 from pydantic import BaseModel, Field, constr
 
-from .config import RetrievalConfig
-
 
 class Query(BaseModel):
     """Single query specification."""
@@ -20,16 +18,9 @@ class Query(BaseModel):
 
 
 class RetrievalRequest(BaseModel):
-    """Retrieval request."""
+    """Simplified retrieval request."""
 
-    schema_version: constr(strip_whitespace=True, min_length=1) = Field(
-        ..., description="Schema version"
+    mode: constr(strip_whitespace=True, pattern="^(lexical|vector|hybrid)$") = Field(
+        default="hybrid", description="Retrieval mode: lexical, vector, or hybrid"
     )
-    dataset_version: constr(strip_whitespace=True, min_length=1) = Field(
-        ..., description="Dataset version"
-    )
-    config_hash: constr(strip_whitespace=True, min_length=1) = Field(
-        ..., description="Configuration hash"
-    )
-    config: RetrievalConfig = Field(..., description="Retrieval configuration")
     queries: list[Query] = Field(..., description="Queries to process", min_items=1)

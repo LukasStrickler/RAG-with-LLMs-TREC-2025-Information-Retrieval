@@ -14,11 +14,15 @@
     "format:backend:embeddings": "cd backend/embeddings && poetry run black .",
     "format:backend:eval": "cd backend/eval && poetry run black .",
     "format:backend": "npm run format:backend:api && npm run format:backend:embeddings && npm run format:backend:eval",
+    "pull:qrel": "bash scripts/pull_qrels.sh",
     "lint:frontend": "cd frontend && deno task lint",
     "format:frontend": "cd frontend && deno task fmt",
     "lint": "npm run lint:backend && npm run lint:frontend",
     "format": "npm run format:backend && npm run format:frontend",
+    "benchmark": "cd backend/eval && DEV=1 poetry run eval pipeline run-all rag24 --experiment-id benchmark_all_modes",
+    "benchmark:lexical": "cd backend/eval && DEV=1 poetry run eval pipeline run rag24 --mode lexical --experiment-id benchmark_lexical",
+    "benchmark:hybrid": "cd backend/eval && DEV=1 poetry run eval pipeline run rag24 --mode hybrid --experiment-id benchmark_hybrid",
+    "benchmark:vector": "cd backend/eval && DEV=1 poetry run eval pipeline run rag24 --mode vector --experiment-id benchmark_vector",
     "review": "mkdir -p .review && coderabbit --base main --prompt-only > .review/coderabbit_review_$(date +%Y%m%d_%H%M%S).txt"
   }
 }
-
