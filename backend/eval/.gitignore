@@ -9,10 +9,12 @@ artifacts/mock_data/*.jsonl
 !artifacts/reports/
 !artifacts/mock_data/
 
-# Temporary files
-*.tsv
-*.json
-*.jsonl
+# Temporary/transient files (only ignore in specific locations)
+# Note: Do not ignore tracked research artifacts or test fixtures
+artifacts/tmp-*.tsv
+artifacts/outputs/*.tsv
+artifacts/tmp-*.json
+artifacts/tmp-*.jsonl
 
 # Python
 __pycache__/

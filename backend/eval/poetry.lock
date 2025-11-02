@@ -1067,7 +1067,7 @@ optional = false
 python-versions = "^3.10"
 groups = ["main"]
 files = []
-develop = true
+develop = false
 
 [package.dependencies]
 pydantic = "^2.9.0"
@@ -1233,4 +1233,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "11c8c6cea81c9a378b83acf63000a29a79430112f1c84ba43662c7a57fa6c33d"
+content-hash = "97b577857eb0a1aae09aa9e0c1589974b4a6bcbafdf2263d22b017ee8a00ed00"
