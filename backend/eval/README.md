@@ -171,8 +171,8 @@ Load and inspect topic files:
 # List available topic files
 poetry run eval topics list
 
-# Load and display a topic file
-poetry run eval topics load rag24 --head 10
+# Load and display a topic file (shows first 5 topics)
+poetry run eval topics load rag24
 
 # Show statistics
 poetry run eval topics stats rag24
@@ -223,7 +223,7 @@ Compare against organizer baselines:
 
 ```bash
 # Compare your run against baseline
-poetry run eval benchmark compare my_run.tsv --baseline rag24
+poetry run eval benchmark compare my_run.tsv --year rag24
 
 # Show baseline targets
 poetry run eval benchmark targets
@@ -274,18 +274,22 @@ Set the mode via:
 
 ## KPI Tracking
 
-The CLI computes and tracks KPIs against targets:
+The CLI computes and tracks KPIs against targets defined in `config.yaml`. 
+
+**Note:** The targets in `config.yaml` represent baseline performance levels (e.g., BM25 baseline). For competitive targets (higher performance goals), see `.docs/KPI.md` which documents:
+- **Competitive targets**: nDCG@10 ≥0.35, MAP@100 ≥0.28, MRR@10 ≥0.55
+- **Baseline targets** (in config.yaml): nDCG@10 ≥0.30, MAP@100 ≥0.25, MRR@10 ≥0.45
 
 ### Primary KPIs
 
-- **nDCG@10** - Primary leaderboard metric (target: 0.30)
-- **MAP@100** - Comprehensive ranking quality (target: 0.25)
-- **MRR@10** - First relevant hit latency (target: 0.45)
+- **nDCG@10** - Primary leaderboard metric (baseline target: 0.30)
+- **MAP@100** - Comprehensive ranking quality (baseline target: 0.25)
+- **MRR@10** - First relevant hit latency (baseline target: 0.45)
 
 ### Secondary KPIs
 
 - **Recall@K** - Coverage at 25, 50, 100
-- **HitRate@10** - Binary success rate
+- **HitRate@10** - Binary success rate (baseline target: 0.70)
 
 ### KPI Reports
 
@@ -334,6 +338,8 @@ artifacts/
 
 ## Integration with API
 
+**Note:** The API currently returns mock responses for development and testing. Real retrieval services will be integrated in future updates.
+
 The CLI communicates with the retrieval API server:
 
 ```
@@ -368,34 +374,36 @@ The CLI communicates with the retrieval API server:
   "results": [
     {
       "query_id": "2024-145979",
-      "segments": [...],
-      "diagnostics": {...}
+      "segments": [
+        {
+          "segment_id": "...",
+          "score": 0.95,
+          "metadata": {...},
+          "provenance": {...}
+        }
+      ],
+      "diagnostics": {
+        "latency_ms": 123.45,
+        "config_hash": "...",
+        "index_versions": {},
+        "warnings": []
+      }
     }
   ]
 }
 ```
 
+The endpoint is `/api/v1/retrieve` and requires authentication via `X-API-Key` header.
+
 ## Error Handling
 
-### API Connection Errors
+The CLI provides comprehensive error handling with clear, actionable messages for:
+- **API errors**: Connection failures, timeouts, and authentication issues
+- **Configuration errors**: Missing config files or invalid settings
+- **File I/O errors**: Missing files, permission issues, and invalid paths
+- **Validation errors**: TREC format violations with specific query IDs and issues
 
-If the API server is not running:
-
-```
-❌ Cannot connect to API server at http://localhost:8000
-   Please ensure the API server is running:
-   npm run backend:dev
-   Original error: All connection attempts failed
-```
-
-### Configuration Errors
-
-The CLI validates configuration and provides helpful error messages:
-
-```
-Configuration file not found: config.yaml
-Please ensure backend/eval/config.yaml exists
-```
+All errors are logged with context and exit with appropriate status codes for CI/CD integration.
 
 ## Development
 
@@ -438,6 +446,7 @@ def my_command(arg: str = typer.Argument(...)):
 ### API Authentication Errors
 
 - Check `API_KEY` in `backend/eval/.env` matches `backend/api/.env`
+- **Note**: API keys are now stored as `SecretStr` for security - they won't appear in logs
 - Ensure API server is running: `npm run backend:dev`
 
 ### Missing Data Files
@@ -454,5 +463,4 @@ def my_command(arg: str = typer.Argument(...)):
 ## References
 
 - [TREC RAG 2025](https://trec-rag.github.io/)
-- [PLAN.md](../../PLAN.md) - Implementation plan
 - [KPI.md](../../.docs/KPI.md) - KPI definitions and targets

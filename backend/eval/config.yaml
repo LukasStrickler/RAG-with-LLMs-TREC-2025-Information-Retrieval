@@ -50,12 +50,16 @@ metrics:
     recall_50: 0.60
     recall_100: 0.62
     hitrate_10: 0.70
+  # Custom metrics are computed via post-processing (not by trec_eval binary)
+  # These metrics are calculated separately from trec_eval metrics
   custom:
-    - "hitrate_10"
+    - "hitrate_10"  # Binary success in top 10 - computed from run file and qrels
 
 trec_eval:
   binary_path: "trec_eval"
   flags: ["-c"]
+  # Metrics computed by trec_eval binary (standard IR metrics)
+  # Note: Custom metrics like hitrate_10 are computed separately via post-processing
   metrics:
     - "ndcg_cut.10"
     - "ndcg_cut.25"
