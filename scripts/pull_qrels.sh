@@ -62,6 +62,7 @@ download_file() {
   local url="$1"
   local target="$2"
   local label="$3"
+  local tmp_file
 
   if [[ -f "${target}" && "${FORCE}" -ne 1 ]]; then
     echo "✓ ${label} already present at ${target}"
@@ -70,8 +71,28 @@ download_file() {
 
   echo "→ Fetching ${label}..."
   tmp_file="$(mktemp)"
-  curl -fL --header "Accept: application/octet-stream" "${url}" -o "${tmp_file}"
-  mv "${tmp_file}" "${target}"
+  
+  # Setup cleanup trap to remove temp file on exit/failure
+  trap "rm -f '${tmp_file}'" EXIT ERR INT TERM
+  
+  # Download with error handling
+  if ! curl -fL --header "Accept: application/octet-stream" "${url}" -o "${tmp_file}" 2>&1; then
+    echo "✗ Error: Failed to download ${label} from ${url}" >&2
+    rm -f "${tmp_file}"
+    trap - EXIT ERR INT TERM
+    return 1
+  fi
+  
+  # Move temp file to target
+  if ! mv "${tmp_file}" "${target}"; then
+    echo "✗ Error: Failed to move ${label} to ${target}" >&2
+    rm -f "${tmp_file}"
+    trap - EXIT ERR INT TERM
+    return 1
+  fi
+  
+  # Clear trap on success
+  trap - EXIT ERR INT TERM
   echo "✓ Saved ${label} to ${target}"
 }
 
