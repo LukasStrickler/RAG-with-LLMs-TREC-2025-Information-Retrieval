@@ -215,83 +215,83 @@ def benchmark(
 
     output_dir.mkdir(parents=True, exist_ok=True)
     run_dir = output_dir
-    run_dir.mkdir(parents=True, exist_ok=True)
+        run_dir.mkdir(parents=True, exist_ok=True)
 
-    try:
-        if topics in config.paths.topics:
-            topic_path = config.get_data_path(config.paths.topics[topics])
-        else:
-            topic_path = Path(topics)
+        try:
+            if topics in config.paths.topics:
+                topic_path = config.get_data_path(config.paths.topics[topics])
+            else:
+                topic_path = Path(topics)
 
-        if not topic_path.exists():
+            if not topic_path.exists():
             console.print(f"[red]Error: Topic file not found: {topic_path}[/red]")
             raise typer.Exit(1)
 
-        topic_set = load_topics(topic_path)
-        client = APIRetrievalClient(config)
-        responses = client.retrieve_batch_sync(topic_set, mode="hybrid", top_k=100)
-    except FileNotFoundError as e:
+            topic_set = load_topics(topic_path)
+            client = APIRetrievalClient(config)
+            responses = client.retrieve_batch_sync(topic_set, mode="hybrid", top_k=100)
+        except FileNotFoundError as e:
         console.print(f"[red]Error: Topic file not found: {e}[/red]")
         raise typer.Exit(1)
     except RuntimeError as e:
         console.print(f"[red]API Error: {e}[/red]")
         raise typer.Exit(1)
-    except Exception as e:
+        except Exception as e:
         console.print(f"[red]Error in pipeline execution: {e}[/red]")
         raise typer.Exit(1)
 
     run_id = f"benchmark_{topics}"
-    metadata = RunMetadata(
-        run_id=run_id,
-        config_snapshot=config.model_dump(),
-        topic_source=str(topic_path),
+        metadata = RunMetadata(
+            run_id=run_id,
+            config_snapshot=config.model_dump(),
+            topic_source=str(topic_path),
         retrieval_mode="hybrid",
-        top_k=100,
-        num_queries=len(topic_set),
-    )
+            top_k=100,
+            num_queries=len(topic_set),
+        )
 
-    try:
-        trec_run = build_trec_run(responses, run_id, metadata)
-        run_file = run_dir / f"{run_id}.tsv"
-        write_trec_run(trec_run, run_file)
-    except Exception as e:
+        try:
+            trec_run = build_trec_run(responses, run_id, metadata)
+            run_file = run_dir / f"{run_id}.tsv"
+            write_trec_run(trec_run, run_file)
+        except Exception as e:
         console.print(f"[red]Error building/writing TREC run: {e}[/red]")
         raise typer.Exit(1)
 
-    qrels_rel_path = config.paths.qrels.get(topics)
-    if not qrels_rel_path:
-        available = list(config.paths.qrels.keys())
+        qrels_rel_path = config.paths.qrels.get(topics)
+        if not qrels_rel_path:
+            available = list(config.paths.qrels.keys())
         console.print(
             f"[red]No qrels configured for topics='{topics}'. Available: {available}[/red]"
-        )
+            )
         raise typer.Exit(1)
-    qrels_path = config.get_data_path(qrels_rel_path)
-    try:
-        trec_eval = TrecEvalWrapper(config)
-        metrics = trec_eval.evaluate(qrels_path, run_file)
-        analyzer = KPIAnalyzer(config)
-        report = analyzer.create_report(metrics)
-        analyzer.print_summary(report)
+        qrels_path = config.get_data_path(qrels_rel_path)
+        try:
+            trec_eval = TrecEvalWrapper(config)
+            metrics = trec_eval.evaluate(qrels_path, run_file)
+            analyzer = KPIAnalyzer(config)
+            report = analyzer.create_report(metrics)
+            analyzer.print_summary(report)
     except FileNotFoundError as e:
         console.print(f"[red]Error: Qrels file not found: {e}[/red]")
         raise typer.Exit(1)
     except RuntimeError as e:
         console.print(f"[red]Error during evaluation: {e}[/red]")
         raise typer.Exit(1)
-    except Exception as e:
+        except Exception as e:
         console.print(f"[red]Error computing metrics: {e}[/red]")
         raise typer.Exit(1)
 
-    report_file = run_dir / f"{run_id}_report.json"
-    try:
-        with open(report_file, "w", encoding="utf-8") as f:
-            json.dump(report.model_dump(), f, indent=2, default=str)
-    except OSError as e:
+        report_file = run_dir / f"{run_id}_report.json"
+        try:
+            with open(report_file, "w", encoding="utf-8") as f:
+                json.dump(report.model_dump(), f, indent=2, default=str)
+        except OSError as e:
         console.print(f"[red]Error writing report file: {e}[/red]")
         raise typer.Exit(1)
-    except Exception as e:
+        except Exception as e:
         console.print(f"[red]Error saving report: {e}[/red]")
-        raise typer.Exit(1)
+            raise typer.Exit(1)
 
     # Display results table
     table = Table(title=f"Benchmark Results ({topics.upper()})")
