@@ -99,6 +99,8 @@ For broader guidance on naming patterns and lint rules, see [`./coding-conventio
    poetry install --no-root
    cd ../eval
    poetry install --no-root
+   cd ../../analysis
+   poetry install --no-root
    ```
 
 4. Activate an env when working on a component:
@@ -107,6 +109,27 @@ For broader guidance on naming patterns and lint rules, see [`./coding-conventio
    cd backend/api
    poetry shell
    ```
+
+## Analysis (Jupyter Notebooks)
+
+1. Install Poetry: follow <https://python-poetry.org/docs/#installation>
+
+2. Install analysis dependencies:
+
+   ```bash
+   cd analysis
+   poetry install
+   ```
+
+3. Start Jupyter:
+
+   ```bash
+   poetry run jupyter notebook
+   ```
+
+4. Open `qrels_essential_analysis.ipynb` for qrels essential documents analysis.
+
+   See [`analysis/README.md`](../analysis/README.md) for detailed usage instructions.
 
 ## Frontend (Deno)
 
