@@ -66,7 +66,7 @@ done
 if ! command -v poetry >/dev/null 2>&1; then
   echo "[warn] Poetry not found. Skipping backend dependency installation." >&2
 else
-  services=(shared backend/api backend/embeddings backend/eval)
+  services=(shared backend/api backend/embeddings backend/eval analysis)
   for service in "${services[@]}"; do
     project_dir="${ROOT_DIR}/${service}"
     if [ -f "${project_dir}/pyproject.toml" ]; then

@@ -13,6 +13,7 @@
 ### ✅ Implemented Components
 - **Evaluation CLI:** Fully functional CLI with topic loading, run generation, scoring, and benchmarking. Supports all TREC evaluation workflows.
 - **Retrieval API:** FastAPI service with `/api/v1/retrieve` and `/api/v1/metadata` endpoints. Currently returns mock responses for testing.
+- **Corpus Analysis:** Jupyter notebook for analyzing qrels data to identify mandatory documents required for evaluation and understand document distribution patterns.
 - **Reproducible workflows:** Fixed random seeds, versioned configs, and data lineage tracking.
 - **Type-safe contracts:** Pydantic models shared across services with runtime validation.
 
@@ -32,6 +33,7 @@ The API infrastructure is ready; only the retrieval service implementations need
 ## Repository Layout
 ```text
 /                       
+├─ analysis/          # ✅ Qrels essential documents analysis (Jupyter notebooks)
 ├─ backend/
 │  ├─ api/            # ✅ FastAPI service (endpoints implemented, ready for retrieval services)
 │  ├─ embeddings/     # 📋 Planned ingestion + embedding workers (Poetry project)
