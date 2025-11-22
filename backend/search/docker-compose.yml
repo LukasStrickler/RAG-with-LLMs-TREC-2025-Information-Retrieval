@@ -1,0 +1,27 @@
+version: '3.8'
+# this is the docker compose file that was run on our coolify server to host solr with multiple default cores
+services:
+  solr:
+    image: solr:latest
+    container_name: solr-multiple-cores
+    restart: always
+    ports:
+      - "8983:8983"
+    environment:
+      - SOLR_JAVA_MEM=-Xms512m -Xmx512m
+    volumes:
+      - solr_data:/var/solr
+    # We override the default command to create multiple cores at startup
+    command:
+      - bash
+      - "-c"
+      - "precreate-core small; precreate-core medium; precreate-core big; exec solr -f"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8983/solr/admin/info/system"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  solr_data:
+    name: solr_data
