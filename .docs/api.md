@@ -26,7 +26,13 @@ All protected endpoints expect an `X-API-Key` header. To configure it locally:
 | --- | --- | --- | --- |
 | `GET` | `/health` | Heartbeat and version info | Public endpoint (no auth required). |
 | `GET` | `/api/v1/metadata` | Returns dataset, chunking, and index metadata | Served from placeholders until the metadata DB is in place. |
-| `POST` | `/api/v1/retrieve` | Retrieval contract returning mock segments | TODO: wire to real retrieval service + indexes. |
+| `POST` | `/api/v1/retrieve` | Retrieval contract returning ranked segments | Connected to Solr (lexical) and Qdrant (vector) via SSH tunnel. |
+
+## Hybrid Retrieval & SSH Tunnel
+
+The retrieval service uses an SSH tunnel to connect to remote Solr and Qdrant instances.
+You must configure the SSH credentials in `backend/api/.env` for the service to start correctly.
+See `setup.md` for configuration details.
 
 ## Useful Commands
 

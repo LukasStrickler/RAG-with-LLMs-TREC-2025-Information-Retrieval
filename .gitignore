@@ -12,6 +12,7 @@ eggs/
 .eggs/
 lib/
 lib64/
+!frontend-next/lib/
 parts/
 sdist/
 var/
@@ -50,6 +51,9 @@ Thumbs.db
 
 # CodeRabbit review output
 .review/
+
+# Data
+data/
 
 # Evaluation data assets
 .data/

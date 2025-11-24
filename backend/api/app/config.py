@@ -5,8 +5,9 @@ FastAPI application configuration.
 import os
 import sys
 from pathlib import Path
+from typing import Optional
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -87,15 +88,27 @@ class Settings(BaseSettings):
         ..., min_length=32, description="API authentication key (minimum 32 characters)"
     )
 
-    cors_origins: list[str] = Field(
+    cors_origins: str | list[str] = Field(
         default=["http://localhost:3000"], description="Allowed CORS origins"
     )
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: str | list[str]) -> list[str]:
+        if isinstance(v, str) and not v.startswith("["):
+            return [origin.strip() for origin in v.split(",")]
+        return v
 
     # Data Configuration
     qrels_path: Path = Field(
         default_factory=_get_default_qrels_path,
         description="Path to qrels file for mock retrieval service",
     )
+
+    # Solr/Qdrant Configuration
+    solr_core: str = Field(default="small", description="Solr core name")
+    qdrant_collection: str = Field(default="documents", description="Qdrant collection name")
+    qdrant_api_key: Optional[str] = Field(default=None, description="Qdrant API Key")
 
     # Application Metadata
     app_name: str = Field(
@@ -108,21 +121,27 @@ class Settings(BaseSettings):
     )
 
     model_config = SettingsConfigDict(
-        env_file=str(Path(__file__).resolve().parent / ".env"),
+        env_file=str(Path(__file__).resolve().parent.parent / ".env"),
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
 
 try:
     # Validate .env file exists before loading settings
-    env_file_path = Path(__file__).resolve().parent / ".env"
+    env_file_path = Path(__file__).resolve().parent.parent / ".env"
     if not env_file_path.exists():
         raise FileNotFoundError(
             f"Environment file not found: {env_file_path}. "
             f"Please ensure backend/api/.env exists. "
             f"See backend/api/.env.example for template."
         )
+    
+    # Load environment variables into os.environ for legacy/non-pydantic code
+    from dotenv import load_dotenv
+    load_dotenv(env_file_path)
+    
     settings = Settings()
 except FileNotFoundError as e:
     sys.stderr.write(f"{e}\n")
