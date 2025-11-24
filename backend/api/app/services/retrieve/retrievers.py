@@ -1,4 +1,5 @@
 import requests
+import psycopg2
 from typing import List, Dict, Any, Optional
 from qdrant_client import QdrantClient
 from dataclasses import dataclass
@@ -18,11 +19,15 @@ class SolrRetriever:
 
     def search(self, query: str, limit: int = 10) -> List[SearchResult]:
         try:
+            # Build explicit query for title and body fields
+            # Use dismax parser for better relevance
             params = {
                 'q': query,
+                'defType': 'edismax',  # Extended DisMax query parser
+                'qf': 'title^2 body',  # Query fields: title with boost 2x, body with 1x
                 'rows': limit,
                 'wt': 'json',
-                'fl': 'id,score,body' # Assuming 'body' is the content field
+                'fl': 'id,score,title,url'  # Return these fields (not body, we'll get it from DB)
             }
             response = requests.get(self.search_url, params=params)
             response.raise_for_status()
@@ -33,8 +38,12 @@ class SolrRetriever:
                 results.append(SearchResult(
                     doc_id=str(doc['id']),
                     score=float(doc.get('score', 0.0)),
-                    content=doc.get('body'),
-                    metadata=doc
+                    content=None,  # Will be filled from DB
+                    metadata={
+                        'title': doc.get('title', ''),
+                        'url': doc.get('url', ''),
+                        'doc_id': str(doc['id'])
+                    }
                 ))
             return results
         except Exception as e:
@@ -57,10 +66,10 @@ class QdrantRetriever:
             results = []
             for hit in search_result:
                 results.append(SearchResult(
-                    doc_id=str(hit.id), # Qdrant uses 'id' or 'payload.id'? Usually 'id' is the point ID.
+                    doc_id=str(hit.id),
                     score=hit.score,
-                    content=hit.payload.get('body') if hit.payload else None,
-                    metadata=hit.payload
+                    content=None,  # Will be filled from DB
+                    metadata=hit.payload if hit.payload else {}
                 ))
             return results
         except Exception as e:
@@ -114,3 +123,58 @@ class HybridRetriever:
             ))
             
         return final_results
+
+class DatabaseRetriever:
+    """Retrieves full document content from PostgreSQL database."""
+    
+    def __init__(self, host: str, port: int, dbname: str, user: str, password: str):
+        self.conn_params = {
+            'host': host,
+            'port': port,
+            'dbname': dbname,
+            'user': user,
+            'password': password
+        }
+    
+    def get_documents(self, doc_ids: List[str]) -> Dict[str, Dict[str, Any]]:
+        """
+        Fetch full documents from database by IDs.
+        Returns dict mapping doc_id -> {title, body, url, length}
+        """
+        if not doc_ids:
+            return {}
+        
+        try:
+            conn = psycopg2.connect(**self.conn_params)
+            cursor = conn.cursor()
+            
+            # Use parameterized query to prevent SQL injection
+            placeholders = ','.join(['%s'] * len(doc_ids))
+            query = f"""
+                SELECT id, title, body, url, length
+                FROM documents
+                WHERE id IN ({placeholders})
+            """
+            
+            cursor.execute(query, doc_ids)
+            rows = cursor.fetchall()
+            
+            # Build result dict
+            result = {}
+            for row in rows:
+                doc_id, title, body, url, length = row
+                result[doc_id] = {
+                    'title': title or '',
+                    'body': body or '',
+                    'url': url or '',
+                    'length': length or 0
+                }
+            
+            cursor.close()
+            conn.close()
+            
+            return result
+            
+        except Exception as e:
+            print(f"Database retrieval error: {e}")
+            return {}

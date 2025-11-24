@@ -15,7 +15,7 @@ from shared.retrieval.response import (
 
 from app.config import settings
 from .ssh_utils import SSHTunnelManager
-from .retrievers import SolrRetriever, QdrantRetriever, HybridRetriever, SearchResult
+from .retrievers import SolrRetriever, QdrantRetriever, HybridRetriever, SearchResult, DatabaseRetriever
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +29,7 @@ class RetrievalService:
         self.solr: Optional[SolrRetriever] = None
         self.qdrant: Optional[QdrantRetriever] = None
         self.hybrid: Optional[HybridRetriever] = None
+        self.db: Optional[DatabaseRetriever] = None
         self.tunnel_active = False
 
     def startup(self):
@@ -56,6 +57,19 @@ class RetrievalService:
             # Initialize Hybrid
             self.hybrid = HybridRetriever(self.solr, self.qdrant)
             logger.info("Hybrid retriever initialized")
+
+            # Initialize Database Retriever
+            db_name = os.getenv("DB_NAME", "postgres")
+            db_user = os.getenv("DB_USER", "postgres")
+            db_password = os.getenv("DB_PASSWORD", "")
+            self.db = DatabaseRetriever(
+                host="localhost",
+                port=ports['db'],
+                dbname=db_name,
+                user=db_user,
+                password=db_password
+            )
+            logger.info(f"Database retriever initialized at localhost:{ports['db']}")
 
         except Exception as e:
             logger.error(f"Failed to startup RetrievalService: {e}")
@@ -116,21 +130,34 @@ class RetrievalService:
                 if self.hybrid:
                     results = self.hybrid.search(query_text, query_vector, limit=top_k)
 
+            # Fetch full document content from database
+            doc_ids = [res.doc_id for res in results]
+            db_docs = {}
+            if self.db and doc_ids:
+                db_docs = self.db.get_documents(doc_ids)
+                logger.info(f"Fetched {len(db_docs)} documents from database")
+
             # Convert SearchResult to RetrievedSegment
             segments = []
             for i, res in enumerate(results):
                 # Extract metadata
                 meta = res.metadata or {}
                 
+                # Get full document from database
+                db_doc = db_docs.get(res.doc_id, {})
+                content = db_doc.get('body', res.content or "No content available")
+                title = db_doc.get('title', meta.get('title', f"Document {res.doc_id}"))
+                url = db_doc.get('url', meta.get('url', ""))
+                
                 segment = RetrievedSegment(
                     segment_id=res.doc_id,
                     score=res.score,
-                    content=res.content or "No content available",
+                    content=content,
                     metadata=SegmentMetadata(
-                        title=meta.get('title', f"Document {res.doc_id}"),
-                        url=meta.get('url', ""),
+                        title=title,
+                        url=url,
                         headings=[], # Solr/Qdrant might not return this structure easily
-                        extras={"rank": i + 1, "raw_metadata": json.dumps(meta)},
+                        extras={"rank": i + 1, "raw_metadata": json.dumps(meta), "length": db_doc.get('length', 0)},
                     ),
                     provenance=ProvenanceInfo(
                         index_kind=self._get_index_kind(mode),

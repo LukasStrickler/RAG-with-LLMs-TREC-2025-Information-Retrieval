@@ -28,12 +28,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Startup
     logger.info("Initializing retrieval service...")
 
-    # Validate qrels file exists
+    # Validate qrels file exists (optional, only warn if missing)
     if not settings.qrels_path.exists():
-        raise RuntimeError(
-            f"Qrels file not found: {settings.qrels_path}\n"
-            "Please ensure the qrels file exists or update "
-            "QRELS_PATH in your configuration."
+        logger.warning(
+            f"Qrels file not found: {settings.qrels_path}. "
+            "This is only needed for evaluation workflows. "
+            "Retrieval service will continue without it."
         )
 
     # Initialize retrieval service
