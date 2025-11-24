@@ -52,19 +52,18 @@ async def retrieve(
         HTTPException: 503 if retrieval service is not available
     """
 
-    # TODO: Replace with real retrieval service
-    # This is currently using mock data for development/testing
-    mock_service = getattr(app_request.app.state, "mock_service", None)
-    if not mock_service:
+    # Access real retrieval service
+    retrieval_service = getattr(app_request.app.state, "retrieval_service", None)
+    if not retrieval_service:
         raise HTTPException(
             status_code=503,
-            detail="Retrieval service not available. Please contact administrator.",
+            detail="Retrieval service not available. Please check server logs.",
         )
 
-    # Generate mock results for each query
+    # Generate results for each query
     results = []
     for query in request.queries:
-        result = mock_service.generate_response(
+        result = retrieval_service.generate_response(
             query_id=query.query_id,
             query_text=query.query_text,
             top_k=query.top_k,

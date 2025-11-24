@@ -77,6 +77,26 @@ npm run update-all
 
 For broader guidance on naming patterns and lint rules, see [`./coding-conventions.md`](./coding-conventions.md).
 
+### SSH Tunnel Configuration
+
+The backend API requires an SSH tunnel to access the remote Solr, Qdrant, and PostgreSQL services.
+You must set the following environment variables in `backend/api/.env`:
+
+```bash
+# SSH Connection
+SSH_HOST=your-ssh-host
+SSH_USER=your-ssh-user
+SSH_KEY_PATH=/path/to/private/key
+# OR SSH_PASSWORD=your-password
+
+# Remote Service Hosts (Internal IPs)
+REMOTE_DB_HOST=10.0.1.7
+REMOTE_SOLR_HOST=10.0.1.X
+REMOTE_QDRANT_HOST=10.0.1.Y
+```
+
+See `backend/api/.env.example` for a full list of configuration options.
+
 
 ## Backend (Python + Poetry)
 

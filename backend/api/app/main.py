@@ -16,7 +16,7 @@ from app.config import settings
 from app.endpoints.health.router import router as health_router
 from app.endpoints.metadata.router import router as metadata_router
 from app.endpoints.retrieve.router import router as retrieve_router
-from app.services.mock_retrieval import MockRetrievalService
+from app.services.retrieve.service import RetrievalService
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -36,16 +36,24 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             "QRELS_PATH in your configuration."
         )
 
-    # Initialize mock retrieval service
-    app.state.mock_service = MockRetrievalService(settings.qrels_path)
-    logger.info(
-        f"✓ Mock retrieval service initialized with qrels: {settings.qrels_path}"
-    )
+    # Initialize retrieval service
+    service = RetrievalService()
+    try:
+        service.startup()
+        app.state.retrieval_service = service
+        logger.info("✓ Retrieval service initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize retrieval service: {e}")
+        # We might want to continue even if retrieval fails, or exit.
+        # For now, we continue but service won't be available.
+        app.state.retrieval_service = None
 
     yield
 
-    # Shutdown (if needed in the future)
+    # Shutdown
     logger.info("Shutting down retrieval service...")
+    if getattr(app.state, "retrieval_service", None):
+        app.state.retrieval_service.shutdown()
 
 
 # Create FastAPI app with lifespan

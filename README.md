@@ -12,16 +12,17 @@
 
 ### ✅ Implemented Components
 - **Evaluation CLI:** Fully functional CLI with topic loading, run generation, scoring, and benchmarking. Supports all TREC evaluation workflows.
-- **Retrieval API:** FastAPI service with `/api/v1/retrieve` and `/api/v1/metadata` endpoints. Currently returns mock responses for testing.
+- **Retrieval API:** FastAPI service with `/api/v1/retrieve` and `/api/v1/metadata` endpoints. Connected to Solr (lexical) and Qdrant (vector) via SSH tunnel.
 - **Corpus Analysis:** Jupyter notebook for analyzing qrels data to identify mandatory documents required for evaluation and understand document distribution patterns.
 - **Reproducible workflows:** Fixed random seeds, versioned configs, and data lineage tracking.
 - **Type-safe contracts:** Pydantic models shared across services with runtime validation.
+- **Retrieval Services:**
+  - **Lexical retrieval:** Solr adapter implemented.
+  - **Vector retrieval:** Qdrant adapter implemented.
+  - **Hybrid retrieval:** Fusion engine implemented.
 
 ### 🔌 Next Steps: Plug in Retrieval Services
-The API infrastructure is ready; only the retrieval service implementations need to be integrated:
-- **Lexical retrieval:** BM25/inverted index adapter (currently mock)
-- **Vector retrieval:** Embedding-based semantic search adapter (currently mock)
-- **Hybrid retrieval:** Fusion engine combining lexical + vector (currently mock)
+The API infrastructure is ready; the following are implemented but need data ingestion to be fully operational:
 
 ### 📋 Planned Components
 - **Embeddings ingestion:** CLI workers for chunking (seed=42, overlap=50, window=512) and vector generation.
@@ -126,8 +127,8 @@ Key model categories:
 
 ### 7. Retrieval API (Lexical / Vector / Hybrid) ✅
 - **Status:** FastAPI endpoints implemented and functional.
-- **Current:** Returns mock `RetrievalResponse` payloads for development/testing.
-- **Next:** Plug in real retrieval services (BM25 adapter, vector adapter, fusion engine).
+- **Current:** Connected to real Solr and Qdrant instances via SSH tunnel.
+- **Next:** Ingest data into indexes.
 - **Ready for:** Integration with keyword index, vector store, and metadata store once they're implemented.
 
 ### 8. Evaluation & Benchmarking ✅
