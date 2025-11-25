@@ -16,6 +16,7 @@ from app.config import settings
 from app.endpoints.health.router import router as health_router
 from app.endpoints.metadata.router import router as metadata_router
 from app.endpoints.retrieve.router import router as retrieve_router
+from app.endpoints.document.router import router as document_router
 from app.services.retrieve.service import RetrievalService
 
 # Configure logging
@@ -95,6 +96,7 @@ app.add_middleware(
 app.include_router(health_router, tags=["health"])
 app.include_router(retrieve_router, prefix="/api/v1", tags=["retrieval"])
 app.include_router(metadata_router, prefix="/api/v1", tags=["metadata"])
+app.include_router(document_router, prefix="/api/v1", tags=["document"])
 
 
 @app.get(

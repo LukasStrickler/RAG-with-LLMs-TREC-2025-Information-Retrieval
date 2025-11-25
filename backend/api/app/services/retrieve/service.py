@@ -1,7 +1,7 @@
 import logging
 import os
 import json
-from typing import Literal, List, Optional
+from typing import Literal, List, Optional, Dict, Any
 from pathlib import Path
 
 from shared.enums import IndexKind
@@ -134,6 +134,7 @@ class RetrievalService:
             doc_ids = [res.doc_id for res in results]
             db_docs = {}
             if self.db and doc_ids:
+                logger.info(f"Fetching {len(doc_ids)} documents from database. Sample IDs: {doc_ids[:5]}")
                 db_docs = self.db.get_documents(doc_ids)
                 logger.info(f"Fetched {len(db_docs)} documents from database")
 
@@ -149,6 +150,15 @@ class RetrievalService:
                 title = db_doc.get('title', meta.get('title', f"Document {res.doc_id}"))
                 url = db_doc.get('url', meta.get('url', ""))
                 
+                # Determine IndexKind based on result source
+                index_kind = self._get_index_kind(mode)
+                if res.source == "lexical":
+                    index_kind = IndexKind.LEXICAL
+                elif res.source == "vector":
+                    index_kind = IndexKind.VECTOR
+                elif res.source == "hybrid":
+                    index_kind = IndexKind.HYBRID
+                
                 segment = RetrievedSegment(
                     segment_id=res.doc_id,
                     score=res.score,
@@ -157,10 +167,10 @@ class RetrievalService:
                         title=title,
                         url=url,
                         headings=[], # Solr/Qdrant might not return this structure easily
-                        extras={"rank": i + 1, "raw_metadata": json.dumps(meta), "length": db_doc.get('length', 0)},
+                        extras={"rank": i + 1, "raw_metadata": json.dumps(meta), "length": db_doc.get('length', 0), "source": res.source},
                     ),
                     provenance=ProvenanceInfo(
-                        index_kind=self._get_index_kind(mode),
+                        index_kind=index_kind,
                         index_snapshot="live",
                         score_components={f"{mode}_score": res.score},
                     ),
@@ -201,6 +211,21 @@ class RetrievalService:
         # to satisfy the interface.
         # I should probably check if there is an embedding service in the codebase.
         return [0.1] * 1024 # Assuming 1024 dim (matches Qdrant collection)
+
+    def get_document_by_id(self, doc_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Retrieve a single document by ID.
+        """
+        if not self.db:
+            logger.warning("Database retriever not initialized")
+            return None
+            
+        try:
+            docs = self.db.get_documents([doc_id])
+            return docs.get(doc_id)
+        except Exception as e:
+            logger.error(f"Error retrieving document {doc_id}: {e}")
+            return None
 
     def _get_index_kind(
         self, mode: Literal["lexical", "vector", "hybrid"]

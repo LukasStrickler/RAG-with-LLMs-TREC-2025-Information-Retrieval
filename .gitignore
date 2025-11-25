@@ -13,6 +13,7 @@ eggs/
 lib/
 lib64/
 !frontend-next/lib/
+!frontend/lib/
 parts/
 sdist/
 var/

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ExternalLink, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -82,9 +83,11 @@ export function SearchResults({
                                         <ExternalLink className="h-3 w-3 flex-shrink-0" />
                                     </a>
                                 )}
-                                <h3 className="text-xl font-medium text-blue-700 group-hover:underline line-clamp-2">
-                                    {segment.metadata.title || `Document ${index + 1}`}
-                                </h3>
+                                <Link href={`/document/${segment.segment_id}`} className="block group-hover:underline">
+                                    <h3 className="text-xl font-medium text-blue-700 line-clamp-2">
+                                        {segment.metadata.title || `Document ${index + 1}`}
+                                    </h3>
+                                </Link>
                             </div>
                             <Badge variant="secondary" className="flex-shrink-0">
                                 {segment.score.toFixed(4)}
@@ -99,6 +102,11 @@ export function SearchResults({
                             <Badge variant="outline" className="text-xs">
                                 {segment.provenance.index_kind}
                             </Badge>
+                            {segment.metadata.extras?.source && (
+                                <Badge variant="secondary" className="text-xs">
+                                    Source: {segment.metadata.extras.source}
+                                </Badge>
+                            )}
                             {segment.metadata.extras?.rank && (
                                 <Badge variant="outline" className="text-xs">
                                     Rank: {segment.metadata.extras.rank}

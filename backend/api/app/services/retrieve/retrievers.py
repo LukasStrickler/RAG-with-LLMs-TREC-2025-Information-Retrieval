@@ -10,6 +10,7 @@ class SearchResult:
     score: float
     content: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
+    source: str = "unknown"  # "lexical", "vector", or "hybrid"
 
 class SolrRetriever:
     def __init__(self, base_url: str, core: str):
@@ -43,7 +44,8 @@ class SolrRetriever:
                         'title': doc.get('title', ''),
                         'url': doc.get('url', ''),
                         'doc_id': str(doc['id'])
-                    }
+                    },
+                    source="lexical"
                 ))
             return results
         except Exception as e:
@@ -65,11 +67,17 @@ class QdrantRetriever:
             
             results = []
             for hit in search_result:
+                payload = hit.payload if hit.payload else {}
+                # Extract original doc_id from payload
+                # Qdrant internal ID is a UUID, but we need the MSMARCO ID
+                original_doc_id = payload.get('doc_id') or payload.get('id') or str(hit.id)
+                
                 results.append(SearchResult(
-                    doc_id=str(hit.id),
+                    doc_id=original_doc_id,
                     score=hit.score,
                     content=None,  # Will be filled from DB
-                    metadata=hit.payload if hit.payload else {}
+                    metadata=payload,
+                    source="vector"
                 ))
             return results
         except Exception as e:
@@ -102,8 +110,13 @@ class HybridRetriever:
         def process_list(results):
             for rank, result in enumerate(results):
                 if result.doc_id not in scores:
-                    scores[result.doc_id] = {'score': 0.0, 'doc': result}
+                    scores[result.doc_id] = {
+                        'score': 0.0, 
+                        'doc': result,
+                        'sources': set()
+                    }
                 scores[result.doc_id]['score'] += 1 / (k + rank + 1)
+                scores[result.doc_id]['sources'].add(result.source)
 
         process_list(list1)
         process_list(list2)
@@ -115,11 +128,24 @@ class HybridRetriever:
         for item in sorted_docs[:limit]:
             # We construct a new SearchResult with the fused score
             original_doc = item['doc']
+            
+            # Determine combined source
+            sources = item['sources']
+            if "lexical" in sources and "vector" in sources:
+                final_source = "hybrid"
+            elif "lexical" in sources:
+                final_source = "lexical"
+            elif "vector" in sources:
+                final_source = "vector"
+            else:
+                final_source = "unknown"
+                
             final_results.append(SearchResult(
                 doc_id=original_doc.doc_id,
                 score=item['score'],
                 content=original_doc.content,
-                metadata=original_doc.metadata
+                metadata=original_doc.metadata,
+                source=final_source
             ))
             
         return final_results
