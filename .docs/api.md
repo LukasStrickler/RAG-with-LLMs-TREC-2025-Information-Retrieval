@@ -46,3 +46,32 @@ See `setup.md` for configuration details.
 
 - Primary configuration lives in `backend/api/.env` (template: `.env.example`).
 - Database credentials are commented out for now; they will be activated when the metadata store is delivered.
+
+## Retrieval Process
+
+The retrieval system supports three modes, configurable via the `mode` parameter in the request:
+
+### 1. Lexical Search (Solr)
+-   **Engine**: Apache Solr (via SSH tunnel).
+-   **Method**: BM25 ranking on `title` and `body` fields.
+-   **Query Parser**: eDisMax.
+-   **Use Case**: Exact keyword matching, phrase queries.
+
+### 2. Vector Search (Qdrant)
+-   **Engine**: Qdrant (via SSH tunnel).
+-   **Embedding Model**: `qwen3-embedding:0.6b` (running locally via Ollama).
+    -   **Dimension**: 1024.
+    -   **Process**: The API generates an embedding for the `query_text` on the fly and queries the Qdrant collection.
+-   **Use Case**: Semantic similarity, finding relevant documents that may not share exact keywords.
+
+### 3. Hybrid Search (Fusion)
+-   **Method**: Reciprocal Rank Fusion (RRF).
+-   **Process**:
+    1.  Executes Lexical Search (top 2*k).
+    2.  Executes Vector Search (top 2*k).
+    3.  Combines results using RRF: `score = 1 / (k + rank)`.
+    4.  Re-ranks and returns the top `k` unique documents.
+-   **Use Case**: Best of both worlds; robust performance across different query types.
+
+### Document Details
+After retrieval (which returns metadata and snippets), the full document content is fetched from the PostgreSQL database using the document ID. This ensures that the user always sees the most complete and up-to-date content.
