@@ -18,7 +18,8 @@ Clean, modular indexing pipeline: PostgreSQL to Solr
 ## Setup
 
 ```bash
-pipenv install
+# Install dependencies from the root directory
+cd ../.. && poetry install
 ssh -L 5433:10.0.1.7:5432 yonis@95.216.74.52 #postgres portforwarding
 ssh -L 5433:i40cc0wsgs0ow0k0o8scw008:5432 yonis@95.216.74.52 #sorl portforawarding
 ```
@@ -27,13 +28,13 @@ ssh -L 5433:i40cc0wsgs0ow0k0o8scw008:5432 yonis@95.216.74.52 #sorl portforawardi
 
 List datasets:
 ```bash
-pipenv run python index_pipeline.py --list-datasets
+poetry run python backend/search/index_pipeline.py --list-datasets
 ```
 
 Index documents:
 ```bash
-pipenv run python index_pipeline.py --dataset small --core big --limit 1000 --clear 
-pipenv run python index_pipeline.py --dataset small --core big
+poetry run python index_pipeline.py --dataset small --core big --limit 1000 --clear 
+poetry run python index_pipeline.py --dataset small --core big
 ```
 
 ## Performance
