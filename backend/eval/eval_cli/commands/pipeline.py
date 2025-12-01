@@ -159,15 +159,15 @@ def run(
         try:
             # Load qrels for custom metrics computation
             qrels, qrels_stats = load_qrels(qrels_path)
-            
+
             # Compute standard metrics using trec_eval
             trec_eval = TrecEvalWrapper(config)
             metrics = trec_eval.evaluate(qrels_path, run_file)
-            
+
             # Compute custom metrics (e.g., HitRate@10)
             hitrate_10 = compute_hitrate_10(trec_run, qrels)
             metrics["hitrate_10"] = hitrate_10
-            
+
             progress.update(task4, description=f"Computed {len(metrics)} metrics")
         except FileNotFoundError as e:
             console.print(f"[red]Error: Qrels file not found: {e}[/red]")
@@ -279,15 +279,15 @@ def benchmark(
     try:
         # Load qrels for custom metrics computation
         qrels, qrels_stats = load_qrels(qrels_path)
-        
+
         # Compute standard metrics using trec_eval
         trec_eval = TrecEvalWrapper(config)
         metrics = trec_eval.evaluate(qrels_path, run_file)
-        
+
         # Compute custom metrics (e.g., HitRate@10)
         hitrate_10 = compute_hitrate_10(trec_run, qrels)
         metrics["hitrate_10"] = hitrate_10
-        
+
         analyzer = KPIAnalyzer(config)
         report = analyzer.create_report(metrics)
         analyzer.print_summary(report)
@@ -436,11 +436,11 @@ def run_all_modes(
         try:
             # Load qrels for custom metrics computation
             qrels, qrels_stats = load_qrels(qrels_path)
-            
+
             # Compute standard metrics using trec_eval
             trec_eval = TrecEvalWrapper(config)
             metrics = trec_eval.evaluate(qrels_path, run_file)
-            
+
             # Compute custom metrics (e.g., HitRate@10)
             hitrate_10 = compute_hitrate_10(trec_run, qrels)
             metrics["hitrate_10"] = hitrate_10

@@ -28,11 +28,11 @@ class TrecEvalWrapper:
         metrics: list[str] | None = None,
     ) -> dict[str, float]:
         """Run trec_eval and parse results.
-        
+
         Supports both:
         1. trec_eval binary: Groups metrics with comma-separated cutoffs (e.g., 'recall.25,50,100')
         2. pytrec_eval fallback: Uses original format with separate metrics (e.g., ['recall.25', 'recall.50'])
-        
+
         Both methods produce identical results, just with different input formats.
         """
         # Validate input files exist
@@ -53,7 +53,7 @@ class TrecEvalWrapper:
         # e.g., ['recall.25', 'recall.50', 'recall.100'] -> ['recall.25,50,100']
         # This is ONLY needed for the trec_eval binary, NOT for pytrec_eval fallback
         grouped_metrics = self._group_metrics(metrics)
-        
+
         cmd = [str(self.binary_path)] + self.config.trec_eval.flags
 
         for metric in grouped_metrics:
@@ -104,7 +104,7 @@ class TrecEvalWrapper:
 
         We need to transpose to:
         {metric_name: mean(per_query_scores)}
-        
+
         Note: pytrec_eval works with separate metric flags (e.g., ['recall.25', 'recall.50']),
         unlike the trec_eval binary which requires comma-separated cutoffs.
         """
@@ -193,31 +193,31 @@ class TrecEvalWrapper:
 
     def _group_metrics(self, metrics: list[str]) -> list[str]:
         """Group metrics by base name and combine cutoffs.
-        
+
         trec_eval requires comma-separated cutoffs in a single -m flag.
         For example: ['recall.25', 'recall.50', 'recall.100'] -> ['recall.25,50,100']
-        
+
         Args:
             metrics: List of metric names (e.g., ['recall.25', 'recall.50', 'ndcg_cut.10'])
-            
+
         Returns:
             List of grouped metric names with comma-separated cutoffs
         """
         # Group metrics by base name (everything before the last dot)
         groups: dict[str, list[str]] = {}
         standalone: list[str] = []
-        
+
         for metric in metrics:
-            if '.' in metric:
+            if "." in metric:
                 # Has a cutoff parameter
-                base, cutoff = metric.rsplit('.', 1)
+                base, cutoff = metric.rsplit(".", 1)
                 if base not in groups:
                     groups[base] = []
                 groups[base].append(cutoff)
             else:
                 # No cutoff, standalone metric
                 standalone.append(metric)
-        
+
         # Combine cutoffs for each base metric
         grouped = []
         for base, cutoffs in groups.items():
@@ -228,10 +228,10 @@ class TrecEvalWrapper:
                 # If not numeric, sort as strings
                 cutoffs_sorted = sorted(cutoffs)
             grouped.append(f"{base}.{','.join(cutoffs_sorted)}")
-        
+
         # Add standalone metrics
         grouped.extend(standalone)
-        
+
         return grouped
 
     def _parse_output(self, output: str) -> dict[str, float]:
@@ -270,10 +270,14 @@ class TrecEvalWrapper:
                     # but we standardize to underscores (recall_25) for consistency
                     normalized_name = metric_name.replace(".", "_")
                     metrics[normalized_name] = value
-                    logger.debug(f"Parsed metric: {metric_name} -> {normalized_name} = {value}")
+                    logger.debug(
+                        f"Parsed metric: {metric_name} -> {normalized_name} = {value}"
+                    )
 
         if not metrics:
-            logger.warning("No metrics found in trec_eval output. This may indicate a parsing issue.")
+            logger.warning(
+                "No metrics found in trec_eval output. This may indicate a parsing issue."
+            )
         else:
             logger.debug(f"Parsed {len(metrics)} metrics: {list(metrics.keys())}")
 

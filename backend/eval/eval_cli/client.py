@@ -29,7 +29,7 @@ class APIRetrievalClient:
         else:
             self.api_key = "dev"  # default for dev
         self.timeout = config.api.timeout
-        
+
         logger.info(
             f"APIRetrievalClient initialized: base_url={self.base_url}, "
             f"api_key={'***' + self.api_key[-4:] if len(self.api_key) > 4 else '***'}, "
@@ -58,7 +58,9 @@ class APIRetrievalClient:
             f"Making API request to {url} with {len(queries)} queries, "
             f"mode={mode}, timeout={self.timeout}s"
         )
-        print(f"[DEBUG] Client: Making API request to {url} with {len(queries)} queries")
+        print(
+            f"[DEBUG] Client: Making API request to {url} with {len(queries)} queries"
+        )
 
         # Make API call
         try:

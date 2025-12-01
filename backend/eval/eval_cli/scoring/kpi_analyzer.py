@@ -53,13 +53,16 @@ class KPIAnalyzer:
                 metrics.get(metric_name)
                 or metrics.get(metric_name.replace("_", "."))  # Try dot version
                 or metrics.get(f"all.{metric_name}")
-                or metrics.get(f"all.{metric_name.replace('_', '.')}")  # Try dot version with all prefix
+                or metrics.get(
+                    f"all.{metric_name.replace('_', '.')}"
+                )  # Try dot version with all prefix
                 or 0.0
             )
-            
+
             # Log warning if metric not found (helps debug missing metrics)
             if value == 0.0 and metric_name not in metrics:
                 import logging
+
                 logger = logging.getLogger(__name__)
                 available_keys = list(metrics.keys())[:10]  # Show first 10 keys
                 logger.warning(
@@ -67,7 +70,7 @@ class KPIAnalyzer:
                     f"Available keys (first 10): {available_keys}. "
                     f"Total metrics: {len(metrics)}"
                 )
-            
+
             target = self.targets.get(metric_name)
 
             # Determine status
