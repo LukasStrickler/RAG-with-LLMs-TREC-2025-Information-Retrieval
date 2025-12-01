@@ -23,12 +23,24 @@ paths:
   
   # Topic files (relative to data_dir)
   topics:
-    rag23: "topics.dl23.txt"
+    rag23: "topics.dl23.txt"  # Default: TREC DL 2023
+    rag24: "topics.rag24.test.txt"
+    dl21: "topics.dl21.txt"
+    dl22: "topics.dl22.txt"
+    dl23: "topics.dl23.txt"
+    msmarco-dev: "topics.msmarco-v2-doc.dev.txt"
+    msmarco-dev2: "topics.msmarco-v2-doc.dev2.txt"
     rag25: "trec_rag_2025_queries.jsonl"
   
   # Qrels files (relative to data_dir)
   qrels:
-    rag23: "qrels.dl23-doc-msmarco-v2.1.txt"
+    rag23: "qrels.dl23-doc-msmarco-v2.1.txt"  # Default: TREC DL 2023
+    rag24: "qrels.rag24.test-umbrela-all.txt"
+    dl21: "qrels.dl21-doc-msmarco-v2.1.txt"
+    dl22: "qrels.dl22-doc-msmarco-v2.1.txt"
+    dl23: "qrels.dl23-doc-msmarco-v2.1.txt"
+    msmarco-dev: "qrels.msmarco-v2.1-doc.dev.txt"
+    msmarco-dev2: "qrels.msmarco-v2.1-doc.dev2.txt"
     rag25: null  # Organizer qrels pending; CLI guards and prompts for override
   
   # Baseline runs (relative to data_dir)
@@ -40,17 +52,30 @@ paths:
 metrics:
   primary: "ndcg_cut_10"
   cutoffs: [10, 25, 50, 100]
+  # Targets based on TREC 2023 Deep Learning Track (DL23) document ranking published results:
+  # Reference: Craswell et al. (2023). Overview of the TREC 2023 Deep Learning Track.
+  # https://trec.nist.gov/pubs/trec32/papers/Overview_deep.pdf
+  # 
+  # Document Ranking Results (Table 3):
+  # - BM25 baseline (D_bm25_splades): nDCG@10=0.494, nDCG@100=0.515, AP=0.298
+  # - Best performer (D_naverloo-frgpt4): nDCG@10=0.689, nDCG@100=0.635, AP=0.419
+  # - Second best (D_naverloo_bm_splade_RR): nDCG@10=0.596, AP=0.379
+  #
+  # Recall targets from competitive benchmarks (DGR on TREC DL 2019):
+  # - Recall@20=0.676, Recall@100=0.865 (similar track, used as reference)
+  # 
+  # Targets set as competitive goals between baseline and best performer
   targets:
-    ndcg_cut_10: 0.30
-    ndcg_cut_25: 0.32
-    ndcg_cut_50: 0.30
-    ndcg_cut_100: 0.28
-    map_cut_100: 0.25
-    recip_rank: 0.45
-    recall_25: 0.55
-    recall_50: 0.60
-    recall_100: 0.62
-    hitrate_10: 0.70
+    ndcg_cut_10: 0.60      # Baseline: 0.494, best: 0.689 (target: competitive)
+    ndcg_cut_25: 0.58      # Estimated from nDCG@10 pattern
+    ndcg_cut_50: 0.56      # Estimated from nDCG@10 pattern
+    ndcg_cut_100: 0.54     # Baseline: 0.515, best: 0.635 (target: competitive)
+    map_cut_100: 0.35      # Baseline: 0.298, best: 0.419 (target: competitive)
+    recip_rank: 0.65       # Competitive target (no explicit DL23 document ranking MRR reported)
+    recall_25: 0.70        # Competitive: DGR Recall@20=0.676, interpolated for @25
+    recall_50: 0.78        # Competitive: Interpolated between Recall@25 and @100
+    recall_100: 0.85       # Competitive: DGR Recall@100=0.865 (slightly conservative)
+    hitrate_10: 0.75       # Competitive target (BM25 typically achieves ~0.70-0.75)
   # Custom metrics are computed via post-processing (not by trec_eval binary)
   # These metrics are calculated separately from trec_eval metrics
   custom:
