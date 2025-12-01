@@ -65,7 +65,15 @@ class APIRetrievalClient:
 
         # Make API call
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
+            # Use Timeout object for better control - set read timeout to config value
+            # Connect timeout is shorter (30s), read timeout is longer for large requests
+            timeout = httpx.Timeout(
+                connect=30.0,  # Connection timeout: 30 seconds
+                read=self.timeout,  # Read timeout: from config (for long-running reranking)
+                write=30.0,  # Write timeout: 30 seconds
+                pool=30.0,  # Pool timeout: 30 seconds
+            )
+            async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.post(
                     url,
                     json=request.model_dump(),

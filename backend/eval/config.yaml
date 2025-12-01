@@ -2,7 +2,7 @@
 # API settings are loaded from backend/eval/.env
 # See .env for API_BASE_URL, API_KEY, API_TIMEOUT, etc.
 api:
-  timeout: 1200  # Increased to 20 minutes for large batch requests (700 queries can take ~12+ minutes)
+  timeout: 10800  # 3 hours for large batch requests with reranking (700 queries × 100 segments with reranking can take 2+ hours)
   max_retries: 3
   concurrency: 5
 

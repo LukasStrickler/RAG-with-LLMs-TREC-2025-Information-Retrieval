@@ -13,10 +13,11 @@ from rich.table import Table
 
 from eval_cli.client import APIRetrievalClient
 from eval_cli.config import Config
-from eval_cli.io.qrels import load_qrels
+from eval_cli.io.qrels import Qrels, load_qrels
 from eval_cli.io.runs import build_trec_run, write_trec_run
 from eval_cli.io.topics import load_topics
 from eval_cli.models.runs import RunMetadata
+from eval_cli.models.topics import TopicSet
 from eval_cli.scoring.custom_metrics import compute_hitrate_10
 from eval_cli.scoring.kpi_analyzer import KPIAnalyzer
 from eval_cli.scoring.trec_eval import TrecEvalWrapper
@@ -46,6 +47,47 @@ def generate_experiment_name(
     return f"{base_name}_{timestamp}"
 
 
+def limit_topic_set(topic_set: TopicSet, limit: int | None) -> TopicSet:
+    """Limit TopicSet to first N queries and rebuild lookup."""
+    if limit is not None and limit < len(topic_set.topics):
+        limited_topics = topic_set.topics[:limit]
+        return TopicSet(
+            topics=limited_topics,
+            source_file=topic_set.source_file,
+            format=topic_set.format,
+        )
+    return topic_set
+
+
+def filter_qrels_for_queries(qrels: Qrels, query_ids: set[str]) -> Qrels:
+    """Filter qrels to only include entries for specified query IDs."""
+    filtered_entries = [
+        entry for entry in qrels.entries if entry.query_id in query_ids
+    ]
+    return Qrels(entries=filtered_entries)
+
+
+def write_filtered_qrels(qrels: Qrels, output_path: Path) -> None:
+    """Write filtered qrels to a file in TREC format."""
+    with open(output_path, "w", encoding="utf-8") as f:
+        for entry in qrels.entries:
+            # TREC qrels format: query_id Q0 doc_id relevance
+            f.write(f"{entry.query_id}\tQ0\t{entry.doc_id}\t{entry.relevance}\n")
+
+
+def filter_topics_by_qrels(topic_set: TopicSet, qrels: Qrels) -> TopicSet:
+    """Filter TopicSet to only include queries that have qrels entries."""
+    queries_with_qrels = {entry.query_id for entry in qrels.entries}
+    filtered_topics = [
+        topic for topic in topic_set.topics if topic.query_id in queries_with_qrels
+    ]
+    return TopicSet(
+        topics=filtered_topics,
+        source_file=topic_set.source_file,
+        format=topic_set.format,
+    )
+
+
 @app.command()
 def run(
     topics: str = typer.Argument(..., help="Topic file (rag23, rag25) or path"),
@@ -53,6 +95,7 @@ def run(
     experiment_id: str = typer.Option(None, help="Experiment identifier (optional)"),
     output_dir: Path = typer.Option(None, help="Output directory"),
     top_k: int = typer.Option(100, help="Number of results per query"),
+    limit: int = typer.Option(None, help="Limit number of queries to process"),
 ) -> None:
     """
     Run complete evaluation pipeline for a retrieval mode.
@@ -92,8 +135,8 @@ def run(
         TextColumn("[progress.description]{task.description}"),
         console=console,
     ) as progress:
-        # Step 1: Load topics
-        task1 = progress.add_task("Loading topics...", total=None)
+        # Step 1: Load topics and qrels, filter topics to only include queries with qrels
+        task1 = progress.add_task("Loading topics and qrels...", total=None)
         try:
             if topics in config.paths.topics:
                 topic_path = config.get_data_path(config.paths.topics[topics])
@@ -105,7 +148,40 @@ def run(
                 raise typer.Exit(1)
 
             topic_set = load_topics(topic_path)
-            progress.update(task1, description=f"Loaded {len(topic_set)} topics")
+            original_count = len(topic_set)
+
+            # Load qrels early to filter topics
+            qrels_rel_path = config.paths.qrels.get(topics)
+            if not qrels_rel_path:
+                available = list(config.paths.qrels.keys())
+                raise RuntimeError(
+                    f"No qrels configured for topics='{topics}'. " f"Available: {available}"
+                )
+            qrels_path = config.get_data_path(qrels_rel_path)
+            qrels, qrels_stats = load_qrels(qrels_path)
+
+            # Filter topics to only include queries that have qrels
+            queries_with_qrels = {entry.query_id for entry in qrels.entries}
+            filtered_count = len([t for t in topic_set.topics if t.query_id in queries_with_qrels])
+            if filtered_count < original_count:
+                topic_set = filter_topics_by_qrels(topic_set, qrels)
+                console.print(
+                    f"[yellow]⚠️  Filtered out {original_count - filtered_count} queries without qrels "
+                    f"(keeping {filtered_count} queries with qrels)[/yellow]"
+                )
+
+            # Apply limit after filtering
+            if limit is not None:
+                if limit > len(topic_set):
+                    console.print(
+                        f"[yellow]⚠️  Limit ({limit}) exceeds available queries ({len(topic_set)}), using all queries[/yellow]"
+                    )
+                else:
+                    topic_set = limit_topic_set(topic_set, limit)
+                    console.print(
+                        f"[yellow]⚠️  Limiting to first {limit} queries (from {filtered_count} with qrels)[/yellow]"
+                    )
+            progress.update(task1, description=f"Loaded {len(topic_set)} topics (with qrels)")
         except FileNotFoundError as e:
             console.print(f"[red]Error: Topic file not found: {e}[/red]")
             raise typer.Exit(1)
@@ -117,7 +193,7 @@ def run(
         task2 = progress.add_task("Generating responses via API...", total=None)
         try:
             client = APIRetrievalClient(config)
-            responses = client.retrieve_batch_sync(topic_set, mode, top_k)
+            responses = client.retrieve_batch_sync(topic_set, mode, top_k, rerank=True)
             progress.update(task2, description=f"Generated {len(responses)} responses")
         except RuntimeError as e:
             console.print(f"[red]API Error: {e}[/red]")
@@ -149,20 +225,23 @@ def run(
 
         # Step 4: Score run
         task4 = progress.add_task("Scoring run...", total=None)
-        qrels_rel_path = config.paths.qrels.get(topics)
-        if not qrels_rel_path:
-            available = list(config.paths.qrels.keys())
-            raise RuntimeError(
-                f"No qrels configured for topics='{topics}'. " f"Available: {available}"
-            )
-        qrels_path = config.get_data_path(qrels_rel_path)
         try:
-            # Load qrels for custom metrics computation
-            qrels, qrels_stats = load_qrels(qrels_path)
+            # Qrels already loaded in Step 1, filter to only include queries in topic_set
+            limited_query_ids = set(topic_set.query_ids)
+            original_qrels_count = len(qrels.entries)
+            qrels = filter_qrels_for_queries(qrels, limited_query_ids)
+            filtered_qrels_count = len(qrels.entries)
+            
+            # Write filtered qrels to temporary file for trec_eval
+            qrels_path_to_use = qrels_path
+            if original_qrels_count != filtered_qrels_count or limit is not None:
+                filtered_qrels_file = output_dir / f"{run_id}_filtered.qrels"
+                write_filtered_qrels(qrels, filtered_qrels_file)
+                qrels_path_to_use = filtered_qrels_file
 
             # Compute standard metrics using trec_eval
             trec_eval = TrecEvalWrapper(config)
-            metrics = trec_eval.evaluate(qrels_path, run_file)
+            metrics = trec_eval.evaluate(qrels_path_to_use, run_file)
 
             # Compute custom metrics (e.g., HitRate@10)
             hitrate_10 = compute_hitrate_10(trec_run, qrels)
@@ -210,6 +289,7 @@ def run(
 def benchmark(
     topics: str = typer.Argument(..., help="Topic file (rag23, rag25) or path"),
     output_dir: Path = typer.Option(None, help="Output directory"),
+    limit: int = typer.Option(None, help="Limit number of queries to process"),
 ) -> None:
     """Run pipeline benchmark in hybrid mode."""
     try:
@@ -238,8 +318,42 @@ def benchmark(
             raise typer.Exit(1)
 
         topic_set = load_topics(topic_path)
+        original_count = len(topic_set)
+
+        # Load qrels early to filter topics
+        qrels_rel_path = config.paths.qrels.get(topics)
+        if not qrels_rel_path:
+            available = list(config.paths.qrels.keys())
+            console.print(
+                f"[red]No qrels configured for topics='{topics}'. Available: {available}[/red]"
+            )
+            raise typer.Exit(1)
+        qrels_path = config.get_data_path(qrels_rel_path)
+        qrels, qrels_stats = load_qrels(qrels_path)
+
+        # Filter topics to only include queries that have qrels
+        queries_with_qrels = {entry.query_id for entry in qrels.entries}
+        filtered_count = len([t for t in topic_set.topics if t.query_id in queries_with_qrels])
+        if filtered_count < original_count:
+            topic_set = filter_topics_by_qrels(topic_set, qrels)
+            console.print(
+                f"[yellow]⚠️  Filtered out {original_count - filtered_count} queries without qrels "
+                f"(keeping {filtered_count} queries with qrels)[/yellow]"
+            )
+
+        # Apply limit after filtering
+        if limit is not None:
+            if limit > len(topic_set):
+                console.print(
+                    f"[yellow]⚠️  Limit ({limit}) exceeds available queries ({len(topic_set)}), using all queries[/yellow]"
+                )
+            else:
+                topic_set = limit_topic_set(topic_set, limit)
+                console.print(
+                    f"[yellow]⚠️  Limiting to first {limit} queries (from {filtered_count} with qrels)[/yellow]"
+                )
         client = APIRetrievalClient(config)
-        responses = client.retrieve_batch_sync(topic_set, mode="hybrid", top_k=100)
+        responses = client.retrieve_batch_sync(topic_set, mode="hybrid", top_k=100, rerank=True)
     except FileNotFoundError as e:
         console.print(f"[red]Error: Topic file not found: {e}[/red]")
         raise typer.Exit(1)
@@ -268,21 +382,23 @@ def benchmark(
         console.print(f"[red]Error building/writing TREC run: {e}[/red]")
         raise typer.Exit(1)
 
-    qrels_rel_path = config.paths.qrels.get(topics)
-    if not qrels_rel_path:
-        available = list(config.paths.qrels.keys())
-        console.print(
-            f"[red]No qrels configured for topics='{topics}'. Available: {available}[/red]"
-        )
-        raise typer.Exit(1)
-    qrels_path = config.get_data_path(qrels_rel_path)
     try:
-        # Load qrels for custom metrics computation
-        qrels, qrels_stats = load_qrels(qrels_path)
+        # Qrels already loaded earlier, filter to only include queries in topic_set
+        limited_query_ids = set(topic_set.query_ids)
+        original_qrels_count = len(qrels.entries)
+        qrels = filter_qrels_for_queries(qrels, limited_query_ids)
+        filtered_qrels_count = len(qrels.entries)
+        
+        # Write filtered qrels to temporary file for trec_eval
+        qrels_path_to_use = qrels_path
+        if original_qrels_count != filtered_qrels_count or limit is not None:
+            filtered_qrels_file = run_dir / f"{run_id}_filtered.qrels"
+            write_filtered_qrels(qrels, filtered_qrels_file)
+            qrels_path_to_use = filtered_qrels_file
 
         # Compute standard metrics using trec_eval
         trec_eval = TrecEvalWrapper(config)
-        metrics = trec_eval.evaluate(qrels_path, run_file)
+        metrics = trec_eval.evaluate(qrels_path_to_use, run_file)
 
         # Compute custom metrics (e.g., HitRate@10)
         hitrate_10 = compute_hitrate_10(trec_run, qrels)
@@ -339,6 +455,7 @@ def run_all_modes(
     experiment_id: str = typer.Option(None, help="Experiment identifier (optional)"),
     output_dir: Path = typer.Option(None, help="Output directory for results"),
     top_k: int = typer.Option(100, help="Number of results per query (default: 100)"),
+    limit: int = typer.Option(None, help="Limit number of queries to process"),
 ) -> None:
     """
     Run evaluation pipeline for ALL retrieval modes (lexical, vector, hybrid).
@@ -368,6 +485,59 @@ def run_all_modes(
     console.print(f"[bold cyan]🧪 Multi-Mode Experiment: {experiment_name}[/bold cyan]")
     console.print(f"[dim]Output directory: {output_dir}[/dim]\n")
 
+    # Load topics and qrels once before the mode loop, filter topics to only include queries with qrels
+    try:
+        if topics in config.paths.topics:
+            topic_path = config.get_data_path(config.paths.topics[topics])
+        else:
+            topic_path = Path(topics)
+
+        if not topic_path.exists():
+            console.print(f"[red]Error: Topic file not found: {topic_path}[/red]")
+            raise typer.Exit(1)
+
+        topic_set = load_topics(topic_path)
+        original_count = len(topic_set)
+
+        # Load qrels early to filter topics
+        qrels_rel_path = config.paths.qrels.get(topics)
+        if not qrels_rel_path:
+            available = list(config.paths.qrels.keys())
+            console.print(
+                f"[red]No qrels configured for topics='{topics}'. Available: {available}[/red]"
+            )
+            raise typer.Exit(1)
+        qrels_path = config.get_data_path(qrels_rel_path)
+        qrels, qrels_stats = load_qrels(qrels_path)
+
+        # Filter topics to only include queries that have qrels
+        queries_with_qrels = {entry.query_id for entry in qrels.entries}
+        filtered_count = len([t for t in topic_set.topics if t.query_id in queries_with_qrels])
+        if filtered_count < original_count:
+            topic_set = filter_topics_by_qrels(topic_set, qrels)
+            console.print(
+                f"[yellow]⚠️  Filtered out {original_count - filtered_count} queries without qrels "
+                f"(keeping {filtered_count} queries with qrels)[/yellow]"
+            )
+
+        # Apply limit after filtering
+        if limit is not None:
+            if limit > len(topic_set):
+                console.print(
+                    f"[yellow]⚠️  Limit ({limit}) exceeds available queries ({len(topic_set)}), using all queries[/yellow]"
+                )
+            else:
+                topic_set = limit_topic_set(topic_set, limit)
+                console.print(
+                    f"[yellow]⚠️  Limiting to first {limit} queries (from {filtered_count} with qrels)[/yellow]"
+                )
+    except FileNotFoundError as e:
+        console.print(f"[red]Error: Topic file not found: {e}[/red]")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]Error loading topics: {e}[/red]")
+        raise typer.Exit(1)
+
     results = {}
 
     for mode in modes:
@@ -380,20 +550,10 @@ def run_all_modes(
         run_id = mode_experiment_name
         mode_output_dir = output_dir / mode
 
-        # Load topics
+        # Use the already-loaded (and potentially limited) topic_set
         try:
-            if topics in config.paths.topics:
-                topic_path = config.get_data_path(config.paths.topics[topics])
-            else:
-                topic_path = Path(topics)
-
-            if not topic_path.exists():
-                console.print(f"[red]Error: Topic file not found: {topic_path}[/red]")
-                raise typer.Exit(1)
-
-            topic_set = load_topics(topic_path)
             client = APIRetrievalClient(config)
-            responses = client.retrieve_batch_sync(topic_set, mode, top_k)
+            responses = client.retrieve_batch_sync(topic_set, mode, top_k, rerank=True)
         except FileNotFoundError as e:
             console.print(f"[red]Error: Topic file not found: {e}[/red]")
             raise typer.Exit(1)
@@ -425,21 +585,23 @@ def run_all_modes(
             raise typer.Exit(1)
 
         # Score
-        qrels_rel_path = config.paths.qrels.get(topics)
-        if not qrels_rel_path:
-            available = list(config.paths.qrels.keys())
-            console.print(
-                f"[red]No qrels configured for topics='{topics}'. Available: {available}[/red]"
-            )
-            raise typer.Exit(1)
-        qrels_path = config.get_data_path(qrels_rel_path)
         try:
-            # Load qrels for custom metrics computation
-            qrels, qrels_stats = load_qrels(qrels_path)
+            # Qrels already loaded earlier, filter to only include queries in topic_set
+            limited_query_ids = set(topic_set.query_ids)
+            original_qrels_count = len(qrels.entries)
+            qrels = filter_qrels_for_queries(qrels, limited_query_ids)
+            filtered_qrels_count = len(qrels.entries)
+            
+            # Write filtered qrels to temporary file for trec_eval
+            qrels_path_to_use = qrels_path
+            if original_qrels_count != filtered_qrels_count or limit is not None:
+                filtered_qrels_file = mode_output_dir / f"{run_id}_filtered.qrels"
+                write_filtered_qrels(qrels, filtered_qrels_file)
+                qrels_path_to_use = filtered_qrels_file
 
             # Compute standard metrics using trec_eval
             trec_eval = TrecEvalWrapper(config)
-            metrics = trec_eval.evaluate(qrels_path, run_file)
+            metrics = trec_eval.evaluate(qrels_path_to_use, run_file)
 
             # Compute custom metrics (e.g., HitRate@10)
             hitrate_10 = compute_hitrate_10(trec_run, qrels)

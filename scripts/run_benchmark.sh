@@ -9,28 +9,64 @@ set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODE="$1"
-shift || true  # Shift mode, remaining args are benchmark args
+shift || true  # Shift mode, remaining args are benchmark args and other options
+
+# Separate benchmark selection args from other args (like --limit)
+BENCHMARK_ARGS=()
+OTHER_ARGS=()
+for arg in "$@"; do
+  case "$arg" in
+    --23|--24|--rag23|--rag24|--dl21|--dl22|--dl23|--msmarco-dev|--msmarco-dev2)
+      BENCHMARK_ARGS+=("$arg")
+      ;;
+    *)
+      OTHER_ARGS+=("$arg")
+      ;;
+  esac
+done
 
 # Get benchmark name from helper script
-BENCHMARK=$(bash "${PROJECT_ROOT}/scripts/benchmark_helper.sh" "$@")
+# Handle empty array case for bash with set -u
+if [ ${#BENCHMARK_ARGS[@]} -gt 0 ]; then
+    BENCHMARK=$(bash "${PROJECT_ROOT}/scripts/benchmark_helper.sh" "${BENCHMARK_ARGS[@]}")
+else
+    BENCHMARK=$(bash "${PROJECT_ROOT}/scripts/benchmark_helper.sh")
+fi
 
 # Map mode to command
+# Pass through any additional arguments (e.g., --limit 5) after benchmark selection
 case "$MODE" in
   run-all)
     cd "${PROJECT_ROOT}/backend/eval" && \
-    DEV=1 poetry run eval pipeline run-all "$BENCHMARK" --experiment-id benchmark_all_modes
+    if [ ${#OTHER_ARGS[@]} -gt 0 ]; then
+      DEV=1 poetry run eval pipeline run-all "$BENCHMARK" --experiment-id benchmark_all_modes "${OTHER_ARGS[@]}"
+    else
+      DEV=1 poetry run eval pipeline run-all "$BENCHMARK" --experiment-id benchmark_all_modes
+    fi
     ;;
   lexical)
     cd "${PROJECT_ROOT}/backend/eval" && \
-    DEV=1 poetry run eval pipeline run "$BENCHMARK" --mode lexical --experiment-id benchmark_lexical
+    if [ ${#OTHER_ARGS[@]} -gt 0 ]; then
+      DEV=1 poetry run eval pipeline run "$BENCHMARK" --mode lexical --experiment-id benchmark_lexical "${OTHER_ARGS[@]}"
+    else
+      DEV=1 poetry run eval pipeline run "$BENCHMARK" --mode lexical --experiment-id benchmark_lexical
+    fi
     ;;
   hybrid)
     cd "${PROJECT_ROOT}/backend/eval" && \
-    DEV=1 poetry run eval pipeline run "$BENCHMARK" --mode hybrid --experiment-id benchmark_hybrid
+    if [ ${#OTHER_ARGS[@]} -gt 0 ]; then
+      DEV=1 poetry run eval pipeline run "$BENCHMARK" --mode hybrid --experiment-id benchmark_hybrid "${OTHER_ARGS[@]}"
+    else
+      DEV=1 poetry run eval pipeline run "$BENCHMARK" --mode hybrid --experiment-id benchmark_hybrid
+    fi
     ;;
   vector)
     cd "${PROJECT_ROOT}/backend/eval" && \
-    DEV=1 poetry run eval pipeline run "$BENCHMARK" --mode vector --experiment-id benchmark_vector
+    if [ ${#OTHER_ARGS[@]} -gt 0 ]; then
+      DEV=1 poetry run eval pipeline run "$BENCHMARK" --mode vector --experiment-id benchmark_vector "${OTHER_ARGS[@]}"
+    else
+      DEV=1 poetry run eval pipeline run "$BENCHMARK" --mode vector --experiment-id benchmark_vector
+    fi
     ;;
   *)
     echo "Unknown mode: $MODE" >&2

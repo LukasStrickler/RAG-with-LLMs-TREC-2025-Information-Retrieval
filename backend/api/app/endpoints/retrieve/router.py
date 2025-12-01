@@ -58,10 +58,11 @@ async def retrieve(
     logger.info(
         f"Received retrieval request: mode={request.mode}, "
         f"num_queries={len(request.queries)}, "
-        f"top_k={request.queries[0].top_k if request.queries else 'N/A'}"
+        f"top_k={request.queries[0].top_k if request.queries else 'N/A'}, "
+        f"rerank={request.rerank}"
     )
     print(
-        f"[DEBUG] Server: Received retrieval request: mode={request.mode}, num_queries={len(request.queries)}"
+        f"[DEBUG] Server: Received retrieval request: mode={request.mode}, num_queries={len(request.queries)}, rerank={request.rerank}"
     )
 
     # Access real retrieval service
@@ -126,21 +127,70 @@ async def retrieve(
 
     # Apply reranking if requested
     if request.rerank:
+        print(f"[DEBUG] Server: Reranking requested, checking reranker availability...")
         reranker = getattr(app_request.app.state, "reranker", None)
         if reranker:
-            logger.info("Applying cross-encoder reranking to %d queries", len(results))
+            print(f"[DEBUG] Server: Reranker is available")
+            total_queries = len(results)
+            total_segments = sum(len(r.segments) for r in results)
+            logger.info(
+                "🔄 Starting cross-encoder reranking for %d queries (%d total segments, mode=%s)",
+                total_queries,
+                total_segments,
+                request.mode,
+            )
+            print(
+                f"[DEBUG] Server: Starting reranking for {total_queries} queries ({total_segments} segments)"
+            )
+            rerank_start = time.time()
             reranked_results = []
-            for result, query in zip(results, request.queries, strict=True):
+            # Log progress more frequently for large batches
+            log_interval = 5 if total_queries > 50 else 1
+            for i, (result, query) in enumerate(
+                zip(results, request.queries, strict=True), start=1
+            ):
+                query_start = time.time()
+                if i % log_interval == 0 or i == 1 or i == total_queries:
+                    logger.info(
+                        "Reranking query %d/%d: %s (%d segments)",
+                        i,
+                        total_queries,
+                        query.query_id,
+                        len(result.segments),
+                    )
+                    print(
+                        f"[DEBUG] Server: Reranking query {i}/{total_queries}: {query.query_id} ({len(result.segments)} segments)"
+                    )
                 reranked_result = reranker.rerank_query_result(
                     query_result=result, query_text=query.query_text
                 )
+                query_time = time.time() - query_start
+                if i % log_interval == 0 or i == 1 or i == total_queries:
+                    logger.info(
+                        "Completed reranking query %d/%d: %s (%.2fs)",
+                        i,
+                        total_queries,
+                        query.query_id,
+                        query_time,
+                    )
                 reranked_results.append(reranked_result)
+            rerank_time = time.time() - rerank_start
+            logger.info(
+                "✅ Reranking completed: %d queries reranked in %.2fs (avg: %.2fs/query)",
+                len(reranked_results),
+                rerank_time,
+                rerank_time / len(reranked_results) if reranked_results else 0,
+            )
+            print(
+                f"[DEBUG] Server: Reranking completed: {len(reranked_results)} queries in {rerank_time:.2f}s"
+            )
             results = reranked_results
         else:
             logger.warning(
                 "Reranking requested but reranker service not available. "
                 "Returning original results."
             )
+            print("[DEBUG] Server: ⚠️  Reranking requested but reranker not available - returning original results")
 
     # Create response with API's own configuration
     # TODO: Replace hardcoded values with database calls when

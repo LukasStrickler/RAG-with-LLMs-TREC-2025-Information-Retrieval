@@ -3,6 +3,7 @@ Cross-encoder reranking service using sentence-transformers.
 """
 
 import logging
+import time
 
 from sentence_transformers import CrossEncoder
 from shared.retrieval.response import QueryResult, RetrievedSegment
@@ -52,18 +53,24 @@ class CrossEncoderReranker:
             logger.warning("No segments to rerank for query: %s", query_result.query_id)
             return query_result
 
+        num_segments = len(query_result.segments)
         # Prepare query-document pairs for cross-encoder
         query_doc_pairs = [
             (query_text, segment.content) for segment in query_result.segments
         ]
 
-        # Get cross-encoder scores
-        logger.debug(
-            "Reranking %d segments for query: %s",
-            len(query_doc_pairs),
-            query_result.query_id,
-        )
+        # Get cross-encoder scores with timing
+        predict_start = time.time()
         cross_encoder_scores = self.model.predict(query_doc_pairs)
+        predict_time = time.time() - predict_start
+
+        logger.info(
+            "Reranked query_id=%s: %d segments in %.3fs (%.1fms/segment)",
+            query_result.query_id,
+            num_segments,
+            predict_time,
+            (predict_time * 1000) / num_segments if num_segments > 0 else 0,
+        )
 
         # Create new segments with updated scores and provenance
         reranked_segments = []
