@@ -27,7 +27,7 @@ export default function DocumentPage() {
       try {
         setLoading(true);
         const doc = await getDocument(params.id as string);
-        setDocument(doc);
+        setDocument(doc as Document);
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "Failed to load document",
