@@ -1,8 +1,13 @@
 import requests
 import psycopg2
+import time
+import logging
+import errno
 from typing import List, Dict, Any, Optional
 from qdrant_client import QdrantClient
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class SearchResult:
@@ -49,40 +54,142 @@ class SolrRetriever:
                 ))
             return results
         except Exception as e:
-            print(f"Solr search error: {e}")
+            logger.error(f"Solr search error: {e}")
             return []
 
 class QdrantRetriever:
-    def __init__(self, host: str, port: int, collection_name: str, api_key: Optional[str] = None):
-        self.client = QdrantClient(host=host, port=port, api_key=api_key, https=False)
+    def __init__(self, host: str, port: int, collection_name: str, api_key: Optional[str] = None, timeout: int = 60):
+        """
+        Initialize Qdrant retriever with timeout and retry configuration.
+        
+        Args:
+            host: Qdrant host
+            port: Qdrant port
+            collection_name: Collection name to search
+            api_key: Optional API key
+            timeout: Request timeout in seconds (default: 60)
+        """
+        self.client = QdrantClient(
+            host=host, 
+            port=port, 
+            api_key=api_key, 
+            https=False,
+            timeout=timeout
+        )
         self.collection_name = collection_name
+        self.timeout = timeout
 
-    def search(self, vector: List[float], limit: int = 10) -> List[SearchResult]:
-        try:
-            search_result = self.client.search(
-                collection_name=self.collection_name,
-                query_vector=vector,
-                limit=limit
-            )
-            
-            results = []
-            for hit in search_result:
-                payload = hit.payload if hit.payload else {}
-                # Extract original doc_id from payload
-                # Qdrant internal ID is a UUID, but we need the MSMARCO ID
-                original_doc_id = payload.get('doc_id') or payload.get('id') or str(hit.id)
+    def search(self, vector: List[float], limit: int = 10, max_retries: int = 3) -> List[SearchResult]:
+        """
+        Search Qdrant with retry logic for timeout errors.
+        
+        Args:
+            vector: Query vector
+            limit: Number of results to return
+            max_retries: Maximum number of retry attempts (default: 3)
+        
+        Returns:
+            List of SearchResult objects
+        """
+        last_error = None
+        
+        for attempt in range(max_retries + 1):  # +1 for initial attempt
+            try:
+                search_result = self.client.search(
+                    collection_name=self.collection_name,
+                    query_vector=vector,
+                    limit=limit
+                )
                 
-                results.append(SearchResult(
-                    doc_id=original_doc_id,
-                    score=hit.score,
-                    content=None,  # Will be filled from DB
-                    metadata=payload,
-                    source="vector"
-                ))
-            return results
-        except Exception as e:
-            print(f"Qdrant search error: {e}")
-            return []
+                results = []
+                for hit in search_result:
+                    payload = hit.payload if hit.payload else {}
+                    # Extract original doc_id from payload
+                    # Qdrant internal ID is a UUID, but we need the MSMARCO ID
+                    original_doc_id = payload.get('doc_id') or payload.get('id') or str(hit.id)
+                    
+                    results.append(SearchResult(
+                        doc_id=original_doc_id,
+                        score=hit.score,
+                        content=None,  # Will be filled from DB
+                        metadata=payload,
+                        source="vector"
+                    ))
+                
+                # Success - return results
+                if attempt > 0:
+                    logger.info(f"Qdrant search succeeded after {attempt + 1} attempts")
+                return results
+                
+            except Exception as e:
+                error_str = str(e)
+                last_error = error_str
+                error_lower = error_str.lower()
+                
+                # Check exception type for connection errors
+                is_os_error = isinstance(e, OSError)
+                errno_value = getattr(e, 'errno', None)
+                is_connection_errno = errno_value in (
+                    errno.ECONNRESET,  # 54 - Connection reset by peer
+                    errno.ECONNREFUSED,  # 61 - Connection refused
+                    errno.ECONNABORTED,  # 53 - Connection aborted
+                    errno.EPIPE,  # 32 - Broken pipe
+                    104,  # ECONNRESET on Linux
+                )
+                
+                # Check if it's a retryable error (timeout, connection, or network errors)
+                is_timeout = (
+                    "timeout" in error_lower or 
+                    "timed out" in error_lower or
+                    "408" in error_str or
+                    "Request Timeout" in error_str
+                )
+                
+                is_connection_error = (
+                    (is_os_error and is_connection_errno) or
+                    "connection reset" in error_lower or
+                    "connection refused" in error_lower or
+                    "connection aborted" in error_lower or
+                    "connection closed" in error_lower or
+                    "disconnected" in error_lower or  # Server disconnected, connection disconnected
+                    "server disconnected" in error_lower or  # Server disconnected without sending a response
+                    "[errno 54]" in error_lower or  # Connection reset by peer (with brackets)
+                    "errno 54" in error_lower or  # Connection reset by peer
+                    "[errno 61]" in error_lower or  # Connection refused (with brackets)
+                    "errno 61" in error_lower or  # Connection refused
+                    "[errno 104]" in error_lower or  # Connection reset by peer Linux (with brackets)
+                    "errno 104" in error_lower or  # Connection reset by peer (Linux)
+                    "ssh error" in error_lower or
+                    "ssh session not active" in error_lower or  # SSH tunnel died
+                    "tunnel" in error_lower or
+                    "broken pipe" in error_lower or
+                    "network" in error_lower or
+                    "connection" in error_lower and ("reset" in error_lower or "refused" in error_lower or "aborted" in error_lower or "closed" in error_lower)
+                )
+                
+                is_retryable = is_timeout or is_connection_error
+                
+                if is_retryable and attempt < max_retries:
+                    wait_time = 2 ** attempt  # Exponential backoff: 1s, 2s, 4s
+                    error_type = "timeout" if is_timeout else "connection"
+                    logger.warning(
+                        f"Qdrant search {error_type} error (attempt {attempt + 1}/{max_retries + 1}): {error_str[:100]}, "
+                        f"retrying in {wait_time}s..."
+                    )
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    # Not retryable, or all retries exhausted
+                    if is_retryable:
+                        error_type = "timeout" if is_timeout else "connection"
+                        logger.error(f"Qdrant search {error_type} error after {max_retries + 1} attempts: {error_str[:200]}")
+                    else:
+                        logger.error(f"Qdrant search error (non-retryable): {error_str[:200]}")
+                    break
+        
+        # All retries exhausted or non-retryable error
+        logger.error(f"Qdrant search failed after all retries. Last error: {last_error[:200] if last_error else 'Unknown'}")
+        return []
 
 class HybridRetriever:
     def __init__(self, solr_retriever: SolrRetriever, qdrant_retriever: QdrantRetriever):
@@ -202,5 +309,5 @@ class DatabaseRetriever:
             return result
             
         except Exception as e:
-            print(f"Database retrieval error: {e}")
+            logger.error(f"Database retrieval error: {e}")
             return {}

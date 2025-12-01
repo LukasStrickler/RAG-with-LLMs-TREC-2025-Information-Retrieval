@@ -3,6 +3,7 @@ API client for calling the retrieval API.
 """
 
 import asyncio
+import logging
 from typing import Literal
 
 import httpx
@@ -13,6 +14,7 @@ from shared.retrieval.response import QueryResult, RetrievalResponse
 from eval_cli.config import Config
 from eval_cli.models.topics import TopicSet
 
+logger = logging.getLogger(__name__)
 RetrievalMode = Literal["lexical", "vector", "hybrid"]
 
 
@@ -27,6 +29,12 @@ class APIRetrievalClient:
         else:
             self.api_key = "dev"  # default for dev
         self.timeout = config.api.timeout
+        
+        logger.info(
+            f"APIRetrievalClient initialized: base_url={self.base_url}, "
+            f"api_key={'***' + self.api_key[-4:] if len(self.api_key) > 4 else '***'}, "
+            f"timeout={self.timeout}s"
+        )
 
     async def retrieve_batch(
         self,
@@ -45,16 +53,24 @@ class APIRetrievalClient:
         # Create simplified request with mode and queries
         request = RetrievalRequest(mode=mode, queries=queries)
 
+        url = f"{self.base_url}/api/v1/retrieve"
+        logger.info(
+            f"Making API request to {url} with {len(queries)} queries, "
+            f"mode={mode}, timeout={self.timeout}s"
+        )
+        print(f"[DEBUG] Client: Making API request to {url} with {len(queries)} queries")
+
         # Make API call
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
-                    f"{self.base_url}/api/v1/retrieve",
+                    url,
                     json=request.model_dump(),
                     headers={
                         "X-API-Key": self.api_key,
                     },
                 )
+                logger.info(f"API response status: {response.status_code}")
                 response.raise_for_status()
         except httpx.ConnectError as e:
             raise RuntimeError(

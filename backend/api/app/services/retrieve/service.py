@@ -1,7 +1,8 @@
+import asyncio
 import logging
 import os
 import json
-import requests
+import httpx
 from typing import Literal, List, Optional, Dict, Any
 from pathlib import Path
 
@@ -47,13 +48,14 @@ class RetrievalService:
             self.solr = SolrRetriever(solr_url, solr_core)
             logger.info(f"Solr initialized at {solr_url} (core: {solr_core})")
 
-            # Initialize Qdrant
+            # Initialize Qdrant with increased timeout for SSH tunnel
             qdrant_collection = settings.qdrant_collection or os.getenv("QDRANT_COLLECTION", "documents")
             qdrant_api_key = settings.qdrant_api_key or os.getenv("QDRANT_API_KEY")
             
             # Qdrant is accessed via localhost through the tunnel
-            self.qdrant = QdrantRetriever("localhost", ports['qdrant'], qdrant_collection, api_key=qdrant_api_key)
-            logger.info(f"Qdrant initialized at localhost:{ports['qdrant']} (collection: {qdrant_collection})")
+            # Use longer timeout (120s) to handle SSH tunnel latency and large queries
+            self.qdrant = QdrantRetriever("localhost", ports['qdrant'], qdrant_collection, api_key=qdrant_api_key, timeout=120)
+            logger.info(f"Qdrant initialized at localhost:{ports['qdrant']} (collection: {qdrant_collection}, timeout: 120s)")
 
             # Initialize Hybrid
             self.hybrid = HybridRetriever(self.solr, self.qdrant)
@@ -85,7 +87,7 @@ class RetrievalService:
             self.tunnel_manager.stop()
             self.tunnel_active = False
 
-    def generate_response(
+    async def generate_response(
         self,
         query_id: str,
         query_text: str,
@@ -110,34 +112,34 @@ class RetrievalService:
         try:
             results: List[SearchResult] = []
             
-            # TODO: We need a vector for vector/hybrid search. 
-            # For now, we'll use a mock vector or we need an embedding service.
-            # The user didn't specify an embedding service yet, but the previous code had 'embeddings' folder.
-            # Let's check if there is an embedding service we can use.
-            # For this step, I will assume we need to generate a vector.
-            # Since I don't have an embedding model loaded here, I will check if I can use one.
-            # But the user request was just "lexical and vector retrieval".
-            # I will use a placeholder vector generation for now and add a TODO.
-            
-            query_vector = self._get_query_vector(query_text)
+            # Only generate embedding for vector or hybrid modes
+            query_vector = None
+            if mode in ("vector", "hybrid"):
+                query_vector = await self._get_query_vector(query_text)
 
             if mode == "lexical":
                 if self.solr:
-                    results = self.solr.search(query_text, limit=top_k)
+                    # Run blocking Solr search in thread pool
+                    logger.debug(f"Searching Solr for query: {query_id}")
+                    results = await asyncio.to_thread(self.solr.search, query_text, top_k)
+                    logger.debug(f"Solr returned {len(results)} results for query: {query_id}")
             elif mode == "vector":
-                if self.qdrant:
-                    results = self.qdrant.search(query_vector, limit=top_k)
+                if self.qdrant and query_vector:
+                    # Run blocking Qdrant search in thread pool
+                    results = await asyncio.to_thread(self.qdrant.search, query_vector, top_k)
             elif mode == "hybrid":
-                if self.hybrid:
-                    results = self.hybrid.search(query_text, query_vector, limit=top_k)
+                if self.hybrid and query_vector:
+                    # Run blocking hybrid search in thread pool
+                    results = await asyncio.to_thread(self.hybrid.search, query_text, query_vector, top_k)
 
             # Fetch full document content from database
             doc_ids = [res.doc_id for res in results]
             db_docs = {}
             if self.db and doc_ids:
-                logger.info(f"Fetching {len(doc_ids)} documents from database. Sample IDs: {doc_ids[:5]}")
-                db_docs = self.db.get_documents(doc_ids)
-                logger.info(f"Fetched {len(db_docs)} documents from database")
+                logger.debug(f"Fetching {len(doc_ids)} documents from database. Sample IDs: {doc_ids[:5]}")
+                # Run blocking DB query in thread pool
+                db_docs = await asyncio.to_thread(self.db.get_documents, doc_ids)
+                logger.debug(f"Fetched {len(db_docs)} documents from database")
 
             # Convert SearchResult to RetrievedSegment
             segments = []
@@ -202,38 +204,101 @@ class RetrievalService:
                 )
             )
 
-    def _get_query_vector(self, text: str) -> List[float]:
+    async def _get_query_vector(self, text: str, max_retries: int = 3) -> List[float]:
         """
-        Generate embedding for query using Ollama.
+        Generate embedding for query using Ollama (async) with retry logic.
+        
+        Args:
+            text: Query text to embed
+            max_retries: Maximum number of retry attempts (default: 3)
+        
+        Returns:
+            4096-dimensional embedding vector
         """
-        try:
-            url = "http://localhost:11434/api/embeddings"
-            payload = {
-                "model": "qwen3-embedding:0.6b",
-                "prompt": text
-            }
-            response = requests.post(url, json=payload)
-            response.raise_for_status()
-            data = response.json()
-            embedding = data.get("embedding", [])
-            
-            if not embedding:
-                logger.warning("Ollama returned empty embedding, using mock")
-                return [0.1] * 1024
-            
-            # Dimension check (optional but good for safety)
-            if len(embedding) != 1024:
-                 logger.warning(f"Embedding dimension mismatch: got {len(embedding)}, expected 1024. This shouldn't happen with qwen3-embedding:0.6b.")
-                 # We could pad/truncate here if we really wanted to be safe, but for now let's just return it 
-                 # and let Qdrant complain if it's wrong, or maybe just return mock to avoid crash.
-                 # Given we verified it's 1024, we can trust it mostly.
-                 
-            return embedding
-            
-        except Exception as e:
-            logger.error(f"Failed to get embedding from Ollama: {e}")
-            # Fallback to mock for now to prevent crash, but log error
-            return [0.1] * 1024
+        url = "http://localhost:11434/api/embeddings"
+        payload = {
+            "model": "qwen3-embedding:8b",
+            "prompt": text
+        }
+        
+        last_error = None
+        
+        for attempt in range(max_retries + 1):  # +1 for initial attempt
+            try:
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    response = await client.post(url, json=payload)
+                    response.raise_for_status()
+                    data = response.json()
+                    embedding = data.get("embedding", [])
+                
+                if not embedding:
+                    if attempt < max_retries:
+                        wait_time = 2 ** attempt  # Exponential backoff: 1s, 2s, 4s
+                        logger.warning(f"Ollama returned empty embedding (attempt {attempt + 1}/{max_retries + 1}), retrying in {wait_time}s...")
+                        await asyncio.sleep(wait_time)
+                        continue
+                    else:
+                        logger.error("Ollama returned empty embedding after all retries, using mock")
+                        return [0.1] * 4096
+                
+                # Dimension check (optional but good for safety)
+                # qwen3-embedding:8b produces 4096-dimensional embeddings
+                if len(embedding) != 4096:
+                    logger.warning(f"Embedding dimension mismatch: got {len(embedding)}, expected 4096. This shouldn't happen with qwen3-embedding:8b.")
+                
+                # Success - return the embedding
+                if attempt > 0:
+                    logger.info(f"Successfully got embedding from Ollama after {attempt + 1} attempts")
+                return embedding
+                
+            except httpx.HTTPStatusError as e:
+                error_detail = f"HTTP {e.response.status_code}"
+                try:
+                    error_body = e.response.json()
+                    error_detail += f": {error_body}"
+                except:
+                    error_detail += f": {e.response.text[:200]}"
+                last_error = f"HTTP error ({error_detail}): {type(e).__name__}"
+                
+                # Retry on 5xx errors, but not on 4xx (client errors)
+                if e.response.status_code >= 500 and attempt < max_retries:
+                    wait_time = 2 ** attempt
+                    logger.warning(f"Ollama HTTP error (attempt {attempt + 1}/{max_retries + 1}): {last_error}, retrying in {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                    continue
+                else:
+                    # Don't retry on 4xx errors (client errors like 404, 400)
+                    logger.error(f"Failed to get embedding from Ollama: {last_error}")
+                    break
+                    
+            except httpx.RequestError as e:
+                last_error = f"{type(e).__name__} - {str(e) or 'Connection error'}"
+                
+                if attempt < max_retries:
+                    wait_time = 2 ** attempt  # Exponential backoff: 1s, 2s, 4s
+                    logger.warning(f"Failed to connect to Ollama (attempt {attempt + 1}/{max_retries + 1}): {last_error}, retrying in {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                    continue
+                else:
+                    logger.error(f"Failed to connect to Ollama after {max_retries + 1} attempts: {last_error}")
+                    break
+                    
+            except Exception as e:
+                last_error = f"{type(e).__name__} - {str(e) or 'Unknown error'}"
+                
+                if attempt < max_retries:
+                    wait_time = 2 ** attempt
+                    logger.warning(f"Unexpected error from Ollama (attempt {attempt + 1}/{max_retries + 1}): {last_error}, retrying in {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                    continue
+                else:
+                    logger.error(f"Failed to get embedding from Ollama after {max_retries + 1} attempts: {last_error}")
+                    break
+        
+        # All retries exhausted - fallback to mock (but this should be rare)
+        logger.error(f"All retry attempts exhausted for embedding generation. Using mock embedding. Last error: {last_error}")
+        # qwen3-embedding:8b produces 4096-dimensional embeddings
+        return [0.1] * 4096
 
     def get_document_by_id(self, doc_id: str) -> Optional[Dict[str, Any]]:
         """

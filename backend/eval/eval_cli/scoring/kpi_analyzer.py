@@ -45,7 +45,29 @@ class KPIAnalyzer:
         }
 
         for metric_name, display_name in key_metrics.items():
-            value = metrics.get(metric_name, metrics.get(f"all.{metric_name}", 0.0))
+            # Try multiple variations of the metric name to handle different formats
+            # 1. Direct match (recall_25)
+            # 2. With dot notation (recall.25) - in case trec_eval binary was used without normalization
+            # 3. With "all." prefix (all.recall_25)
+            value = (
+                metrics.get(metric_name)
+                or metrics.get(metric_name.replace("_", "."))  # Try dot version
+                or metrics.get(f"all.{metric_name}")
+                or metrics.get(f"all.{metric_name.replace('_', '.')}")  # Try dot version with all prefix
+                or 0.0
+            )
+            
+            # Log warning if metric not found (helps debug missing metrics)
+            if value == 0.0 and metric_name not in metrics:
+                import logging
+                logger = logging.getLogger(__name__)
+                available_keys = list(metrics.keys())[:10]  # Show first 10 keys
+                logger.warning(
+                    f"Metric '{metric_name}' not found in metrics dict. "
+                    f"Available keys (first 10): {available_keys}. "
+                    f"Total metrics: {len(metrics)}"
+                )
+            
             target = self.targets.get(metric_name)
 
             # Determine status

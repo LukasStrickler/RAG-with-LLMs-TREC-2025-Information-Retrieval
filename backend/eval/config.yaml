@@ -2,7 +2,7 @@
 # API settings are loaded from backend/eval/.env
 # See .env for API_BASE_URL, API_KEY, API_TIMEOUT, etc.
 api:
-  timeout: 30
+  timeout: 1200  # Increased to 20 minutes for large batch requests (700 queries can take ~12+ minutes)
   max_retries: 3
   concurrency: 5
 
@@ -23,16 +23,17 @@ paths:
   
   # Topic files (relative to data_dir)
   topics:
-    rag24: "topics.rag24.test.txt"
+    rag23: "topics.dl23.txt"
     rag25: "trec_rag_2025_queries.jsonl"
   
   # Qrels files (relative to data_dir)
   qrels:
-    rag24: "qrels.rag24.test-umbrela-all.txt"
+    rag23: "qrels.dl23-doc-msmarco-v2.1.txt"
     rag25: null  # Organizer qrels pending; CLI guards and prompts for override
   
   # Baseline runs (relative to data_dir)
   baselines:
+    # rag23: "fs4_bm25+rocchio_snowael_snowaem_gtel+monot5_rrf+rz_rrf.rag24.test.txt"
     rag24: "fs4_bm25+rocchio_snowael_snowaem_gtel+monot5_rrf+rz_rrf.rag24.test.txt"
     rag25: "run.rankqwen3_32b.rag25.txt"
 
