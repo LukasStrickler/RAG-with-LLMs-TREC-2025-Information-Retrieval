@@ -63,7 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.13"]
+        python-version: ["3.11"]
 
     steps:
       - name: Checkout
@@ -74,33 +74,46 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Cache Poetry virtualenv
+      - name: Install Pipenv
+        run: |
+          pip install pipenv
+
+      - name: Cache Pipenv virtualenv
         uses: actions/cache@v4
         with:
           path: backend/embeddings/.venv
-          key: ${{ runner.os }}-embeddings-${{ matrix.python-version }}-${{ hashFiles('backend/embeddings/poetry.lock') }}
+          key: ${{ runner.os }}-embeddings-${{ matrix.python-version }}-${{ hashFiles('backend/embeddings/Pipfile.lock') }}
           restore-keys: |
             ${{ runner.os }}-embeddings-${{ matrix.python-version }}-
             ${{ runner.os }}-embeddings-
 
-      - name: Install Poetry
-        uses: abatilo/actions-poetry@v2
-        with:
-          poetry-version: "1.8.3"
-
       - name: Install dependencies
         working-directory: backend/embeddings
         run: |
-          poetry config virtualenvs.in-project true
-          poetry install --no-interaction --no-root
+          pipenv install --dev --skip-lock || pipenv install --dev
+
+      - name: Install linting tools
+        working-directory: backend/embeddings
+        run: |
+          pipenv install --dev ruff black || pip install ruff black
 
       - name: Ruff lint
         working-directory: backend/embeddings
-        run: poetry run ruff check .
+        run: |
+          if command -v pipenv &> /dev/null; then
+            pipenv run ruff check . || ruff check .
+          else
+            ruff check .
+          fi
 
       - name: Black format check
         working-directory: backend/embeddings
-        run: poetry run black --check .
+        run: |
+          if command -v pipenv &> /dev/null; then
+            pipenv run black --check . || black --check .
+          else
+            black --check .
+          fi
 
   lint-eval:
     runs-on: ubuntu-latest
@@ -144,3 +157,4 @@ jobs:
       - name: Black format check
         working-directory: backend/eval
         run: poetry run black --check .
+
