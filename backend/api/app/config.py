@@ -5,7 +5,6 @@ FastAPI application configuration.
 import os
 import sys
 from pathlib import Path
-from typing import Optional
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -107,8 +106,10 @@ class Settings(BaseSettings):
 
     # Solr/Qdrant Configuration
     solr_core: str = Field(default="small", description="Solr core name")
-    qdrant_collection: str = Field(default="documents", description="Qdrant collection name")
-    qdrant_api_key: Optional[str] = Field(default=None, description="Qdrant API Key")
+    qdrant_collection: str = Field(
+        default="documents", description="Qdrant collection name"
+    )
+    qdrant_api_key: str | None = Field(default=None, description="Qdrant API Key")
 
     # Application Metadata
     app_name: str = Field(
@@ -137,11 +138,12 @@ try:
             f"Please ensure backend/api/.env exists. "
             f"See backend/api/.env.example for template."
         )
-    
+
     # Load environment variables into os.environ for legacy/non-pydantic code
     from dotenv import load_dotenv
+
     load_dotenv(env_file_path)
-    
+
     settings = Settings()
 except FileNotFoundError as e:
     sys.stderr.write(f"{e}\n")
