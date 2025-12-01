@@ -13,9 +13,11 @@ from rich.table import Table
 
 from eval_cli.client import APIRetrievalClient
 from eval_cli.config import Config
+from eval_cli.io.qrels import load_qrels
 from eval_cli.io.runs import build_trec_run, write_trec_run
 from eval_cli.io.topics import load_topics
 from eval_cli.models.runs import RunMetadata
+from eval_cli.scoring.custom_metrics import compute_hitrate_10
 from eval_cli.scoring.kpi_analyzer import KPIAnalyzer
 from eval_cli.scoring.trec_eval import TrecEvalWrapper
 
@@ -46,7 +48,7 @@ def generate_experiment_name(
 
 @app.command()
 def run(
-    topics: str = typer.Argument(..., help="Topic file (rag24, rag25) or path"),
+    topics: str = typer.Argument(..., help="Topic file (rag23, rag25) or path"),
     mode: str = typer.Option("hybrid", help="Retrieval mode: lexical, vector, hybrid"),
     experiment_id: str = typer.Option(None, help="Experiment identifier (optional)"),
     output_dir: Path = typer.Option(None, help="Output directory"),
@@ -155,8 +157,17 @@ def run(
             )
         qrels_path = config.get_data_path(qrels_rel_path)
         try:
+            # Load qrels for custom metrics computation
+            qrels, qrels_stats = load_qrels(qrels_path)
+
+            # Compute standard metrics using trec_eval
             trec_eval = TrecEvalWrapper(config)
             metrics = trec_eval.evaluate(qrels_path, run_file)
+
+            # Compute custom metrics (e.g., HitRate@10)
+            hitrate_10 = compute_hitrate_10(trec_run, qrels)
+            metrics["hitrate_10"] = hitrate_10
+
             progress.update(task4, description=f"Computed {len(metrics)} metrics")
         except FileNotFoundError as e:
             console.print(f"[red]Error: Qrels file not found: {e}[/red]")
@@ -197,7 +208,7 @@ def run(
 
 @app.command()
 def benchmark(
-    topics: str = typer.Argument(..., help="Topic file (rag24, rag25) or path"),
+    topics: str = typer.Argument(..., help="Topic file (rag23, rag25) or path"),
     output_dir: Path = typer.Option(None, help="Output directory"),
 ) -> None:
     """Run pipeline benchmark in hybrid mode."""
@@ -266,8 +277,17 @@ def benchmark(
         raise typer.Exit(1)
     qrels_path = config.get_data_path(qrels_rel_path)
     try:
+        # Load qrels for custom metrics computation
+        qrels, qrels_stats = load_qrels(qrels_path)
+
+        # Compute standard metrics using trec_eval
         trec_eval = TrecEvalWrapper(config)
         metrics = trec_eval.evaluate(qrels_path, run_file)
+
+        # Compute custom metrics (e.g., HitRate@10)
+        hitrate_10 = compute_hitrate_10(trec_run, qrels)
+        metrics["hitrate_10"] = hitrate_10
+
         analyzer = KPIAnalyzer(config)
         report = analyzer.create_report(metrics)
         analyzer.print_summary(report)
@@ -315,7 +335,7 @@ def benchmark(
 
 @app.command("run-all")
 def run_all_modes(
-    topics: str = typer.Argument(..., help="Topic file (rag24, rag25)"),
+    topics: str = typer.Argument(..., help="Topic file (rag23, rag25)"),
     experiment_id: str = typer.Option(None, help="Experiment identifier (optional)"),
     output_dir: Path = typer.Option(None, help="Output directory for results"),
     top_k: int = typer.Option(100, help="Number of results per query (default: 100)"),
@@ -414,8 +434,16 @@ def run_all_modes(
             raise typer.Exit(1)
         qrels_path = config.get_data_path(qrels_rel_path)
         try:
+            # Load qrels for custom metrics computation
+            qrels, qrels_stats = load_qrels(qrels_path)
+
+            # Compute standard metrics using trec_eval
             trec_eval = TrecEvalWrapper(config)
             metrics = trec_eval.evaluate(qrels_path, run_file)
+
+            # Compute custom metrics (e.g., HitRate@10)
+            hitrate_10 = compute_hitrate_10(trec_run, qrels)
+            metrics["hitrate_10"] = hitrate_10
 
             # Analyze KPIs
             analyzer = KPIAnalyzer(config)
@@ -489,7 +517,7 @@ def run_all_modes(
 
 @app.command("list")
 def list_experiments(
-    topics: str = typer.Option(None, help="Filter by topics (rag24, rag25)"),
+    topics: str = typer.Option(None, help="Filter by topics (rag23, rag25)"),
     mode: str = typer.Option(None, help="Filter by mode (lexical, vector, hybrid)"),
 ) -> None:
     """

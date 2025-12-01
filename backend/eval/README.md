@@ -45,10 +45,10 @@ npm run benchmark:vector            # Run vector retrieval only
 
 ```bash
 # Run evaluation for a single mode
-poetry run eval pipeline run rag24 --mode hybrid
+poetry run eval pipeline run rag23 --mode hybrid
 
 # Run evaluation for all modes and compare
-poetry run eval pipeline run-all rag24 --experiment-id baseline_v1
+poetry run eval pipeline run-all rag23 --experiment-id baseline_v1
 
 # List previous experiments
 poetry run eval pipeline list
@@ -137,10 +137,10 @@ paths:
   data_dir: ".data/trec_rag_assets"
   output_dir: "backend/eval/artifacts"
   topics:
-    rag24: "topics.rag24.test.txt"
+    rag23: "topics.dl23.txt"
     rag25: "trec_rag_2025_queries.jsonl"
   qrels:
-    rag24: "qrels.rag24.test-umbrela-all.txt"
+    rag23: "qrels.dl23-doc-msmarco-v2.1.txt"
     rag25: null
   baselines:
     rag24: "fs4_bm25+rocchio_snowael_snowaem_gtel+monot5_rrf+rz_rrf.rag24.test.txt"
@@ -172,10 +172,10 @@ Load and inspect topic files:
 poetry run eval topics list
 
 # Load and display a topic file (shows first 5 topics)
-poetry run eval topics load rag24
+poetry run eval topics load rag23
 
 # Show statistics
-poetry run eval topics stats rag24
+poetry run eval topics stats rag23
 ```
 
 ### Generate Responses
@@ -184,10 +184,10 @@ Generate retrieval responses via API:
 
 ```bash
 # Generate responses for all topics
-poetry run eval generate run rag24
+poetry run eval generate run rag23
 
 # Specify output file and top_k
-poetry run eval generate run rag24 --output results.json --top-k 100
+poetry run eval generate run rag23 --output results.json --top-k 100
 ```
 
 ### Runs
@@ -223,7 +223,7 @@ Compare against organizer baselines:
 
 ```bash
 # Compare your run against baseline
-poetry run eval benchmark compare my_run.tsv --year rag24
+poetry run eval benchmark compare my_run.tsv --year rag23
 
 # Show baseline targets
 poetry run eval benchmark targets
@@ -247,10 +247,10 @@ npm run benchmark:vector    # Vector (semantic)
 **Using poetry directly:**
 ```bash
 # Run single mode evaluation
-poetry run eval pipeline run rag24 --mode hybrid --experiment-id test1
+poetry run eval pipeline run rag23 --mode hybrid --experiment-id test1
 
 # Run all modes and compare
-poetry run eval pipeline run-all rag24 --experiment-id baseline_v1
+poetry run eval pipeline run-all rag23 --experiment-id baseline_v1
 
 # List previous experiments
 poetry run eval pipeline list
@@ -324,16 +324,16 @@ Experiments are organized with timestamps for easy comparison:
 ```text
 artifacts/
 └── experiments/
-    └── baseline_v1_rag24_20251024_183800/
+    └── baseline_v1_rag23_20251024_183800/
         ├── lexical/
-        │   ├── baseline_v1_rag24_20251024_183800_lexical.tsv
-        │   └── baseline_v1_rag24_20251024_183800_lexical_report.json
+        │   ├── baseline_v1_rag23_20251024_183800_lexical.tsv
+        │   └── baseline_v1_rag23_20251024_183800_lexical_report.json
         ├── vector/
-        │   ├── baseline_v1_rag24_20251024_183800_vector.tsv
-        │   └── baseline_v1_rag24_20251024_183800_vector_report.json
+        │   ├── baseline_v1_rag23_20251024_183800_vector.tsv
+        │   └── baseline_v1_rag23_20251024_183800_vector_report.json
         └── hybrid/
-            ├── baseline_v1_rag24_20251024_183800_hybrid.tsv
-            └── baseline_v1_rag24_20251024_183800_hybrid_report.json
+            ├── baseline_v1_rag23_20251024_183800_hybrid.tsv
+            └── baseline_v1_rag23_20251024_183800_hybrid_report.json
 ```
 
 ## Integration with API
@@ -356,7 +356,7 @@ The CLI communicates with the retrieval API server:
   "mode": "hybrid",
   "queries": [
     {
-      "query_id": "2024-145979",
+      "query_id": "2000138",
       "query_text": "What is machine learning?",
       "top_k": 100
     }
@@ -368,12 +368,12 @@ The CLI communicates with the retrieval API server:
 ```json
 {
   "schema_version": "1.0",
-  "dataset_version": "trec_rag_2024",
+  "dataset_version": "trec_rag_2023",
   "config_hash": "hybrid_config_v1",
   "request_id": "uuid-here",
   "results": [
     {
-      "query_id": "2024-145979",
+      "query_id": "2000138",
       "segments": [
         {
           "segment_id": "...",

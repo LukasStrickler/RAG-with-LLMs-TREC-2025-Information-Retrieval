@@ -3,6 +3,7 @@ pytest configuration and fixtures.
 """
 
 import logging
+import os
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,9 @@ from eval_cli.io.qrels import Qrels
 from eval_cli.io.topics import TopicSet
 
 logger = logging.getLogger(__name__)
+
+# Set DEV=1 for all tests to enable auto-detection of project root
+os.environ["DEV"] = "1"
 
 
 @pytest.fixture

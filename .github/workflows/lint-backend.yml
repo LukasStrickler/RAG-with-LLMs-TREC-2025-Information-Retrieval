@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.11"]
+        python-version: ["3.13"]
 
     steps:
       - name: Checkout
@@ -63,7 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.11"]
+        python-version: ["3.11"]
 
     steps:
       - name: Checkout
@@ -74,39 +74,38 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Cache Poetry virtualenv
+      - name: Install Pipenv
+        run: |
+          pip install pipenv
+
+      - name: Cache Pipenv virtualenv
         uses: actions/cache@v4
         with:
           path: backend/embeddings/.venv
-          key: ${{ runner.os }}-embeddings-${{ matrix.python-version }}-${{ hashFiles('backend/embeddings/poetry.lock') }}
+          key: ${{ runner.os }}-embeddings-${{ matrix.python-version }}-${{ hashFiles('backend/embeddings/Pipfile.lock') }}
           restore-keys: |
             ${{ runner.os }}-embeddings-${{ matrix.python-version }}-
             ${{ runner.os }}-embeddings-
 
-      - name: Install Poetry
-        uses: abatilo/actions-poetry@v2
-        with:
-          poetry-version: "1.8.3"
-
-      - name: Install dependencies
-        working-directory: backend/embeddings
+      - name: Install linting tools
         run: |
-          poetry config virtualenvs.in-project true
-          poetry install --no-interaction --no-root
+          pip install ruff black
 
       - name: Ruff lint
         working-directory: backend/embeddings
-        run: poetry run ruff check .
+        run: |
+          ruff check *.py
 
       - name: Black format check
         working-directory: backend/embeddings
-        run: poetry run black --check .
+        run: |
+          black --check *.py
 
   lint-eval:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.11"]
+        python-version: ["3.13"]
 
     steps:
       - name: Checkout
@@ -144,3 +143,4 @@ jobs:
       - name: Black format check
         working-directory: backend/eval
         run: poetry run black --check .
+

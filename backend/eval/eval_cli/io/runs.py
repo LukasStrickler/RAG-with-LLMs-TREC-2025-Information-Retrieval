@@ -17,12 +17,30 @@ def build_trec_run(
     run_id: str,
     metadata: RunMetadata,
 ) -> TrecRun:
-    """Convert retrieval responses to TREC run."""
+    """
+    Convert retrieval responses to TREC run.
+
+    Segments are sorted by score (descending), then by doc_id (ascending) for
+    deterministic tie-breaking. This ensures that when multiple documents have
+    the same score, they are ordered consistently, making evaluation results
+    reproducible. The rank field assigned here is authoritative for all evaluation
+    metrics (e.g., HitRate@10 uses rank 1-10 as the top 10).
+    """
     rows = []
 
     for query_id, query_result in responses.items():
-        # Extract segments from QueryResult
-        for rank, segment in enumerate(query_result.segments[:100], start=1):
+        # Sort segments by score (descending), then doc_id (ascending) for deterministic tie-breaking
+        # This ensures consistent ranking when scores are equal, making evaluation reproducible
+        sorted_segments = sorted(
+            query_result.segments[:100],
+            key=lambda s: (
+                -s.score,
+                s.segment_id,
+            ),  # Negative score for descending order
+        )
+
+        # Assign ranks sequentially to sorted segments
+        for rank, segment in enumerate(sorted_segments, start=1):
             row = TrecRunRow(
                 query_id=query_id,
                 doc_id=segment.segment_id,

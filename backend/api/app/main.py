@@ -13,10 +13,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from shared import ApiInfoResponse
 
 from app.config import settings
+from app.endpoints.document.router import router as document_router
 from app.endpoints.health.router import router as health_router
 from app.endpoints.metadata.router import router as metadata_router
 from app.endpoints.retrieve.router import router as retrieve_router
-from app.endpoints.document.router import router as document_router
 from app.services.retrieve.service import RetrievalService
 
 # Configure logging

@@ -2,16 +2,18 @@
 Document endpoint.
 """
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Request
-from typing import Dict, Any
 
 from app.middleware.auth import get_api_key
 
 router = APIRouter()
 
+
 @router.get(
     "/document/{doc_id}",
-    response_model=Dict[str, Any],
+    response_model=dict[str, Any],
     summary="Get Document",
     description="Retrieve full document content by ID",
 )
@@ -19,7 +21,7 @@ async def get_document(
     doc_id: str,
     app_request: Request,
     api_key: str = Depends(get_api_key),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Retrieve a single document by ID.
     """
