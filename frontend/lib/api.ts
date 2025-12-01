@@ -4,6 +4,8 @@ import type { RetrievalRequest, RetrievalResponse } from "./types";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const API_KEY = process.env.NEXT_PUBLIC_API_KEY || "";
 
+// Trigger CI workflow
+
 const apiClient = axios.create({
     baseURL: API_URL,
     headers: {
