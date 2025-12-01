@@ -2,7 +2,8 @@
 
 # Download public evaluation assets for the TREC RAG track.
 # Assets include:
-#   • 2023 TREC DL qrels/topics (TREC Deep Learning 2023)
+#   • All TREC RAG/DL qrels and topics (2021-2024)
+#   • MS MARCO Dev/Dev2 qrels and topics
 #   • 2025 retrieval baselines (top-100 run + reranker request JSONL)
 # References:
 #   https://trec-rag.github.io/annoucements/2025-rag25-corpus/
@@ -14,8 +15,21 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DATA_DIR="${PROJECT_ROOT}/.data/trec_rag_assets"
 
 ASSETS=(
+  # Qrels files
+  "qrels.rag24.test-umbrela-all.txt|https://raw.githubusercontent.com/castorini/anserini-tools/master/topics-and-qrels/qrels.rag24.test-umbrela-all.txt"
+  "qrels.dl21-doc-msmarco-v2.1.txt|https://raw.githubusercontent.com/castorini/anserini-tools/master/topics-and-qrels/qrels.dl21-doc-msmarco-v2.1.txt"
+  "qrels.dl22-doc-msmarco-v2.1.txt|https://raw.githubusercontent.com/castorini/anserini-tools/master/topics-and-qrels/qrels.dl22-doc-msmarco-v2.1.txt"
   "qrels.dl23-doc-msmarco-v2.1.txt|https://raw.githubusercontent.com/castorini/anserini-tools/master/topics-and-qrels/qrels.dl23-doc-msmarco-v2.1.txt"
+  "qrels.msmarco-v2.1-doc.dev.txt|https://raw.githubusercontent.com/castorini/anserini-tools/master/topics-and-qrels/qrels.msmarco-v2.1-doc.dev.txt"
+  "qrels.msmarco-v2.1-doc.dev2.txt|https://raw.githubusercontent.com/castorini/anserini-tools/master/topics-and-qrels/qrels.msmarco-v2.1-doc.dev2.txt"
+  # Topics files
+  "topics.rag24.test.txt|https://raw.githubusercontent.com/castorini/anserini-tools/master/topics-and-qrels/topics.rag24.test.txt"
+  "topics.dl21.txt|https://raw.githubusercontent.com/castorini/anserini-tools/master/topics-and-qrels/topics.dl21.txt"
+  "topics.dl22.txt|https://raw.githubusercontent.com/castorini/anserini-tools/master/topics-and-qrels/topics.dl22.txt"
   "topics.dl23.txt|https://raw.githubusercontent.com/castorini/anserini-tools/master/topics-and-qrels/topics.dl23.txt"
+  "topics.msmarco-v2-doc.dev.txt|https://raw.githubusercontent.com/castorini/anserini-tools/master/topics-and-qrels/topics.msmarco-v2-doc.dev.txt"
+  "topics.msmarco-v2-doc.dev2.txt|https://raw.githubusercontent.com/castorini/anserini-tools/master/topics-and-qrels/topics.msmarco-v2-doc.dev2.txt"
+  # 2025 files
   "trec_rag_2025_queries.jsonl|https://trec-rag.github.io/assets/jsonl/trec_rag_2025_queries.jsonl"
   "run.rankqwen3_32b.rag25.txt|https://raw.githubusercontent.com/castorini/ragnarok_data/main/rag25/retrieve_results/MISC/run.rankqwen3_32b.rag25.txt"
   "retrieve_results_rankqwen3_32b.rag25_top100.jsonl|https://media.githubusercontent.com/media/castorini/ragnarok_data/main/rag25/retrieve_results/MISC/retrieve_results_rankqwen3_32b.rag25_top100.jsonl"
@@ -30,7 +44,8 @@ Usage: $(basename "$0") [--force]
 Downloads the latest publicly released TREC RAG assets into:
   ${DATA_DIR}
 
-Includes 2023 TREC DL qrels/topics, and 2025 topics plus RankQwen baseline retrieval files.
+Includes all TREC RAG/DL qrels and topics (2021-2024), MS MARCO Dev/Dev2,
+and 2025 topics plus RankQwen baseline retrieval files.
 
 Pass --force to overwrite existing files.
 EOF
@@ -103,4 +118,5 @@ done
 
 echo ""
 echo "Stored competition evaluation assets under ${DATA_DIR}."
+echo "Available benchmarks: rag24, dl21, dl22, dl23, msmarco-dev, msmarco-dev2"
 echo "Note: Official 2025 qrels have not yet been published; update this script once they are available."

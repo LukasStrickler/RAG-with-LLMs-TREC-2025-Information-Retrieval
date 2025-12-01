@@ -102,7 +102,13 @@ Key model categories:
 ### 1. Dataset (Development Subset)
 - Curated slice of the corpus for fast iteration and cost control.
 - Stable IDs and metadata; scales to the full set later.
-- **Status:** Available in `.data/trec_rag_assets/` for evaluation workflows (2024 UMBRELA qrels + topics, 2025 topics + baselines), via the `npm run pull:qrel` command.
+- **Status:** Available in `.data/trec_rag_assets/` for evaluation workflows via the `npm run pull:qrel` command.
+- **Available Benchmarks:**
+  - TREC RAG 2024 (rag24): 301 topics
+  - TREC DL 2021-2023 (dl21, dl22, dl23): 477, 500, 700 topics respectively
+  - MS MARCO Dev/Dev2 (msmarco-dev, msmarco-dev2): 4,552 and 5,000 topics
+  - TREC RAG 2025 (rag25): Topics available, qrels pending
+- **Usage:** Default benchmark is rag23. Override with flags: `npm run benchmark:lexical -- --24`
 
 
 ### 2. Build Keyword Index 📋
@@ -177,10 +183,14 @@ Key model categories:
 | `npm run update-all` | Install/update all dependencies across all services |
 | `npm run lint` | Run linting for all backend and frontend code |
 | `npm run format` | Format all backend and frontend code |
-| `npm run benchmark` | Run evaluation for all retrieval modes (lexical, vector, hybrid) |
-| `npm run benchmark:lexical` | Run evaluation for lexical retrieval mode only |
-| `npm run benchmark:hybrid` | Run evaluation for hybrid retrieval mode only |
-| `npm run benchmark:vector` | Run evaluation for vector retrieval mode only |
+| `npm run benchmark` | Run evaluation for all retrieval modes (lexical, vector, hybrid), default: rag23 |
+| `npm run benchmark -- --24` | Run benchmark with rag24 override |
+| `npm run benchmark:lexical` | Run evaluation for lexical retrieval mode only, default: rag23 |
+| `npm run benchmark:lexical -- --24` | Run lexical benchmark with rag24 override |
+| `npm run benchmark:hybrid` | Run evaluation for hybrid retrieval mode only, default: rag23 |
+| `npm run benchmark:hybrid -- --24` | Run hybrid benchmark with rag24 override |
+| `npm run benchmark:vector` | Run evaluation for vector retrieval mode only, default: rag23 |
+| `npm run benchmark:vector -- --24` | Run vector benchmark with rag24 override |
 
 ## Team
 - Lean Fürst — [lean.henriques.fuerst@students.uni-mannheim.de](mailto:lean.henriques.fuerst@students.uni-mannheim.de)

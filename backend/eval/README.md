@@ -35,10 +35,32 @@ npm run backend:dev  # In project root
 
 ```bash
 # From project root - handles Poetry environment automatically
-npm run benchmark                    # Run all retrieval modes (lexical, vector, hybrid)
-npm run benchmark:lexical           # Run lexical retrieval only
-npm run benchmark:hybrid            # Run hybrid retrieval only
-npm run benchmark:vector            # Run vector retrieval only
+# Default benchmark: rag23 (TREC DL 2023)
+
+# Run all retrieval modes (lexical, vector, hybrid)
+npm run benchmark                    # Uses rag23 (default)
+npm run benchmark -- --24           # Override: use rag24
+npm run benchmark -- --dl21         # Override: use dl21
+npm run benchmark -- --msmarco-dev  # Override: use msmarco-dev
+
+# Run specific retrieval mode
+npm run benchmark:lexical            # Lexical mode, rag23 (default)
+npm run benchmark:lexical -- --24   # Lexical mode, rag24
+
+npm run benchmark:hybrid            # Hybrid mode, rag23 (default)
+npm run benchmark:hybrid -- --24     # Hybrid mode, rag24
+
+npm run benchmark:vector            # Vector mode, rag23 (default)
+npm run benchmark:vector -- --24     # Vector mode, rag24
+
+# Available benchmark flags:
+# --23, --rag23    → TREC DL 2023 (default)
+# --24, --rag24    → TREC RAG 2024
+# --dl21           → TREC DL 2021
+# --dl22           → TREC DL 2022
+# --dl23           → TREC DL 2023
+# --msmarco-dev    → MS MARCO Dev
+# --msmarco-dev2   → MS MARCO Dev2
 ```
 
 #### Option B: Using poetry directly
@@ -137,11 +159,23 @@ paths:
   data_dir: ".data/trec_rag_assets"
   output_dir: "backend/eval/artifacts"
   topics:
-    rag23: "topics.dl23.txt"
+    rag23: "topics.dl23.txt"  # Default: TREC DL 2023
+    rag24: "topics.rag24.test.txt"
+    dl21: "topics.dl21.txt"
+    dl22: "topics.dl22.txt"
+    dl23: "topics.dl23.txt"
+    msmarco-dev: "topics.msmarco-v2-doc.dev.txt"
+    msmarco-dev2: "topics.msmarco-v2-doc.dev2.txt"
     rag25: "trec_rag_2025_queries.jsonl"
   qrels:
-    rag23: "qrels.dl23-doc-msmarco-v2.1.txt"
-    rag25: null
+    rag23: "qrels.dl23-doc-msmarco-v2.1.txt"  # Default: TREC DL 2023
+    rag24: "qrels.rag24.test-umbrela-all.txt"
+    dl21: "qrels.dl21-doc-msmarco-v2.1.txt"
+    dl22: "qrels.dl22-doc-msmarco-v2.1.txt"
+    dl23: "qrels.dl23-doc-msmarco-v2.1.txt"
+    msmarco-dev: "qrels.msmarco-v2.1-doc.dev.txt"
+    msmarco-dev2: "qrels.msmarco-v2.1-doc.dev2.txt"
+    rag25: null  # Organizer qrels pending
   baselines:
     rag24: "fs4_bm25+rocchio_snowael_snowaem_gtel+monot5_rrf+rz_rrf.rag24.test.txt"
     rag25: "run.rankqwen3_32b.rag25.txt"
@@ -236,12 +270,17 @@ Complete evaluation workflows:
 **Using npm scripts (from project root):**
 ```bash
 # Run all modes and compare (recommended)
-npm run benchmark
+npm run benchmark                    # Default: rag23
+npm run benchmark -- --24            # Override: rag24
+npm run benchmark -- --dl21          # Override: dl21
 
 # Run specific retrieval mode
-npm run benchmark:lexical   # Lexical (BM25)
-npm run benchmark:hybrid    # Hybrid (fusion)
-npm run benchmark:vector    # Vector (semantic)
+npm run benchmark:lexical            # Lexical (BM25), rag23 (default)
+npm run benchmark:lexical -- --24    # Lexical (BM25), rag24
+npm run benchmark:hybrid             # Hybrid (fusion), rag23 (default)
+npm run benchmark:hybrid -- --24     # Hybrid (fusion), rag24
+npm run benchmark:vector             # Vector (semantic), rag23 (default)
+npm run benchmark:vector -- --24     # Vector (semantic), rag24
 ```
 
 **Using poetry directly:**
@@ -257,6 +296,32 @@ poetry run eval pipeline list
 
 # Compare two experiments
 poetry run eval pipeline compare experiment1 experiment2
+```
+
+## Available Benchmarks
+
+The CLI supports multiple TREC benchmarks. Use the `--` flag with npm scripts to override the default (rag23):
+
+| Flag | Benchmark | Description | Topics |
+|------|-----------|-------------|--------|
+| `--23`, `--rag23` | TREC DL 2023 | Default benchmark | 700 |
+| `--24`, `--rag24` | TREC RAG 2024 | UMBRELA test set | 301 |
+| `--dl21` | TREC DL 2021 | Deep Learning 2021 | 477 |
+| `--dl22` | TREC DL 2022 | Deep Learning 2022 | 500 |
+| `--dl23` | TREC DL 2023 | Deep Learning 2023 | 700 |
+| `--msmarco-dev` | MS MARCO Dev | Development set | 4,552 |
+| `--msmarco-dev2` | MS MARCO Dev2 | Development set 2 | 5,000 |
+
+**Example:**
+```bash
+# Use default (rag23)
+npm run benchmark:lexical
+
+# Override to rag24
+npm run benchmark:lexical -- --24
+
+# Override to dl21
+npm run benchmark:lexical -- --dl21
 ```
 
 ## Retrieval Modes
@@ -453,6 +518,10 @@ def my_command(arg: str = typer.Argument(...)):
 
 - Topic files and qrels should be in `.data/trec_rag_assets/`
 - Download using: `npm run pull:qrel`
+- The download script fetches all available benchmarks:
+  - TREC RAG 2024 (rag24)
+  - TREC DL 2021-2023 (dl21, dl22, dl23)
+  - MS MARCO Dev/Dev2 (msmarco-dev, msmarco-dev2)
 
 ### Configuration Issues
 
