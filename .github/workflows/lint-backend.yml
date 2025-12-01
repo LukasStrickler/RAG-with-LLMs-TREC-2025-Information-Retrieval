@@ -87,33 +87,19 @@ jobs:
             ${{ runner.os }}-embeddings-${{ matrix.python-version }}-
             ${{ runner.os }}-embeddings-
 
-      - name: Install dependencies
-        working-directory: backend/embeddings
-        run: |
-          pipenv install --dev --skip-lock || pipenv install --dev
-
       - name: Install linting tools
-        working-directory: backend/embeddings
         run: |
-          pipenv install --dev ruff black || pip install ruff black
+          pip install ruff black
 
       - name: Ruff lint
         working-directory: backend/embeddings
         run: |
-          if command -v pipenv &> /dev/null; then
-            pipenv run ruff check . || ruff check .
-          else
-            ruff check .
-          fi
+          ruff check *.py
 
       - name: Black format check
         working-directory: backend/embeddings
         run: |
-          if command -v pipenv &> /dev/null; then
-            pipenv run black --check . || black --check .
-          else
-            black --check .
-          fi
+          black --check *.py
 
   lint-eval:
     runs-on: ubuntu-latest
