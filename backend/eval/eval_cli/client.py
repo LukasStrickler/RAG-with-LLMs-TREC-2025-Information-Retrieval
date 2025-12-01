@@ -41,6 +41,7 @@ class APIRetrievalClient:
         topics: TopicSet,
         mode: RetrievalMode = "hybrid",
         top_k: int = 100,
+        rerank: bool = False,
     ) -> dict[str, QueryResult]:
         """Retrieve responses for all topics via API."""
 
@@ -51,7 +52,7 @@ class APIRetrievalClient:
         ]
 
         # Create simplified request with mode and queries
-        request = RetrievalRequest(mode=mode, queries=queries)
+        request = RetrievalRequest(mode=mode, queries=queries, rerank=rerank)
 
         url = f"{self.base_url}/api/v1/retrieve"
         logger.info(
@@ -145,6 +146,7 @@ class APIRetrievalClient:
         topics: TopicSet,
         mode: RetrievalMode = "hybrid",
         top_k: int = 100,
+        rerank: bool = False,
     ) -> dict[str, QueryResult]:
         """Synchronous wrapper for CLI commands."""
-        return asyncio.run(self.retrieve_batch(topics, mode, top_k))
+        return asyncio.run(self.retrieve_batch(topics, mode, top_k, rerank))

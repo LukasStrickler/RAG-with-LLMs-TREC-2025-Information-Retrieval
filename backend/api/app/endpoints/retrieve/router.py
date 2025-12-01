@@ -124,6 +124,24 @@ async def retrieve(
     )
     print(f"[DEBUG] Server: Completed all {len(results)} queries in {total_time:.2f}s")
 
+    # Apply reranking if requested
+    if request.rerank:
+        reranker = getattr(app_request.app.state, "reranker", None)
+        if reranker:
+            logger.info("Applying cross-encoder reranking to %d queries", len(results))
+            reranked_results = []
+            for result, query in zip(results, request.queries, strict=True):
+                reranked_result = reranker.rerank_query_result(
+                    query_result=result, query_text=query.query_text
+                )
+                reranked_results.append(reranked_result)
+            results = reranked_results
+        else:
+            logger.warning(
+                "Reranking requested but reranker service not available. "
+                "Returning original results."
+            )
+
     # Create response with API's own configuration
     # TODO: Replace hardcoded values with database calls when
     # implementing real retrieval
