@@ -1,0 +1,6 @@
+psycopg2-binary
+sshtunnel
+qdrant-client
+tqdm
+paramiko
+requests
