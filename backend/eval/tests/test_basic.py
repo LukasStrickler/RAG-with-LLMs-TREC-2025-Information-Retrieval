@@ -15,7 +15,7 @@ def test_config_loading() -> None:
     config = Config.load()
     assert config.api.base_url == "http://localhost:8000"
     assert config.retrieval.top_k == 100
-    assert "rag24" in config.paths.topics
+    assert "rag23" in config.paths.topics
     assert "rag25" in config.paths.topics
 
 
