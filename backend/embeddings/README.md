@@ -1,325 +1,202 @@
 # Embeddings & Ingestion Pipeline
 
-This service handles the ingestion of documents from the PostgreSQL database into the Qdrant vector database.
+This service ingests documents from PostgreSQL into Qdrant and documents the journey we took to make embeddings practical at scale. It covers local GPU pipelines with chunking, A100 experiments, and the final remote embeddings approach via OpenRouter, including trade-offs, costs, and reproducible run guidance.
 
 ## Overview
 
 - **Source**: PostgreSQL (`documents` table)
-- **Destination**: Qdrant (Collection: `small`)
-- **Model**: `Qwen/Qwen3-Embedding-0.6B` (1024 dimensions)
-- **Chunking**: Sliding window (Size: 512, Overlap: 50)
+- **Destination**: Qdrant (primary collection name varies; e.g., `small`, `small_openrouter_nc`)
+- **Local Model**: `Qwen/Qwen3-Embedding-0.6B` (1024 dims; small context window → chunking required)
+- **Remote Model**: `Qwen 3 8B Embedding` via OpenRouter (larger window → no chunking)
+- **Runtime Modes**:
+    - Local GPU notebook/script (chunk + embed + upsert)
+    - Remote embeddings via API (embed via OpenRouter, same ingest/upsert pipeline)
+
+Key implementation files:
+- Notebook: `backend/embeddings/embedding_ingestion.ipynb` (SSH tunnel setup, pipelined ingestion, progress metrics, helpers)
+- Scripts: `backend/embeddings/ingest.py`, `backend/embeddings/embedding_ingestion_openrouter.py` (local vs remote encoder swap)
+- DB adapter: `backend/embeddings/db.py` (threaded connection pool, dataset/doc fetch)
+- Qdrant helpers: upsert batching, collection setup embedded in the notebook/script
+
+## Timeline & Trade-offs
+
+We needed to process ~1.6M documents with ~3k tokens per document on average.
+
+- **Local GPU (RTX 5070 Ti) with chunking**
+    - Pipeline: SSH tunnels → fetch → chunk (512 + overlap 50) → embed → batched upsert.
+    - Result: ~5 docs/sec in practice. VRAM was not the bottleneck; compute (matrix ops + embedding) dominated. Chunking increased total tokens and runtime.
+    - Parallelism: Prefetch/Embed/Upsert pipelined; multiple local model instances didn’t materially improve end-to-end throughput.
+    - Token math: ~3,000 tokens/doc × 1.6M docs ≈ 4.8B tokens. With chunking (overlap adds repeat tokens), effective tokens grow further, compounding runtime.
+    - Batching & precision: BF16 on CUDA to cut memory, hard-clamped `max_seq_length=512` to avoid tokenizer inflating sequence lengths.
+
+- **A100 (80GB) attempt**
+    - Tried larger batches and multiple model workers to leverage VRAM and bandwidth.
+    - Constraint: Compute stayed the limiter; aggressive batching hit VRAM ceilings. Gains were marginal relative to scale.
+    - Observation: Embedding generation saturated compute; VRAM increases did not translate to proportional docs/sec improvements.
+
+- **Remote embeddings via OpenRouter (Final)**
+    - Kept the same pipeline; swapped encoder to API calls.
+    - Model: `Qwen 3 8B Embedding` with a larger context window → removed chunking.
+    - Outcome: Best throughput and scalability; operationally simpler.
+    - Cost: ~$0.05 per 1M tokens. With 1.6M docs × ~3k tokens/doc, full coverage was too expensive.
+    - Compromise: Fixed-budget run → ~400k embedded docs. Included all qrels-referenced documents to support evaluation.
+    - Benefit: Simpler ingestion metadata (no chunk indices), lower latency per doc, fewer Qdrant points per document.
+    - Next bottleneck: SSH tunnel bandwidth limited network throughput for pulling docs and upserting points.
+    - Final infra change: Run the pipeline directly on our Linux server (close to Postgres/Qdrant). Result: significantly faster document fetches and upserts (lower latency, higher sustained throughput).
 
 ## Setup
 
-1.  **Prerequisites**:
-    *   Python 3.11+
-    *   CUDA-capable GPU (Recommended)
-    *   PostgreSQL (via SSH tunnel)
-    *   Qdrant (via SSH tunnel)
+1. **Prerequisites**
+     - Python 3.11+
+     - PostgreSQL and Qdrant reachable via SSH tunnel (dev)
+     - Optional CUDA-capable GPU for local runs
 
-2.  **Install Dependencies**:
-    ```bash
-    pipenv install
-    ```
-    *Note: This project uses `pipenv` for dependency management.*
+2. **Install dependencies (pipenv)**
+     ```bash
+     pipenv install
+     ```
 
-3.  **SSH Tunnels**:
-    Ensure you have the SSH tunnels running as described in the root README or search README.
-    *   Postgres: Port 5433
-    *   Qdrant: Port 6334 (GRPC)
+3. **SSH tunnels**
+     - Postgres: `localhost:5433`
+     - Qdrant: `localhost:6333` (HTTP) and/or `localhost:6334` (gRPC)
+    - Note: For high-throughput runs, prefer running on the same network/host as Postgres/Qdrant to avoid SSH tunnel bottlenecks.
+
+4. **Environment variables (remote mode)**
+    - `OPENROUTER_API_KEY`: API key for OpenRouter
+    - `EMBEDDING_MODEL_ID`: e.g., `Qwen/Qwen3-Embedding-0.6B` (local) or OpenRouter’s `qwen-3-8b-embedding`
+    - Optional knobs: `BATCH_SIZE`, `QDRANT_UPSERT_BATCH`, `PREFETCH_BATCHES`, `NUM_EMBED_WORKERS`, `RESUME_INGESTION`, `PURGE_COLLECTION`
 
 ## Usage
 
-Run the ingestion pipeline:
+Run the local ingestion pipeline:
 
 ```bash
 pipenv run python ingest.py
 ```
 
+Notebook-based ingestion and helpers live in `embedding_ingestion.ipynb`.
+
+Remote embeddings runner (example):
+
+```bash
+export OPENROUTER_API_KEY=... 
+pipenv run python embedding_ingestion_openrouter.py
+```
+
 ## Configuration
 
-*   **Database**: Configured in `ingest.py` (matches `backend/search` config).
-*   **Qdrant**: Defaults to `localhost:6334`.
-*   **Model**: Defaults to `Qwen/Qwen3-Embedding-0.6B`.
+- **Database**: configured in `ingest.py` (aligned with `backend/search`).
+- **Qdrant**: defaults to local tunnel (`6333/6334`).
+- **Model**: local mode uses `Qwen/Qwen3-Embedding-0.6B`; remote mode configures OpenRouter.
+ - **Chunking**: enabled for small-context models (512 window, 50 overlap); disabled for larger-window remote model.
+ - **Resume**: enabled by default to skip already-ingested `doc_id`s.
 
 ## Logging & Tracking
 
-The pipeline uses `shared.data.dataset.ChunkingSpec` to validate chunking configurations.
-Progress is displayed via `tqdm`.
+- Validates chunking configurations where applicable; progress via `tqdm`.
+- Upserts in batches, `wait=False` to avoid indexing stalls.
+ - Rolling per-stage throughput (docs/sec) displayed: fetch, embed, upsert.
 
-## Detailed Pipeline Walkthrough
+## Pipeline Walkthrough (Local)
 
-Here is a step-by-step explanation of how `ingest.py` works:
+1. **Initialization**: connect to Postgres and Qdrant via SSH; load local embedding model.
+2. **Dataset Selection**: select target dataset (e.g., `small`); reuse name as Qdrant collection.
+3. **Collection Setup**: create collection with COSINE distance and correct vector size.
+4. **Processing Loop**: fetch doc IDs in batches; retrieve doc contents.
+5. **Batch Processing**:
+     - Chunking (512 window, 50 overlap) for small-context models.
+     - Embedding on GPU/CPU; deterministic UUIDs (`uuid5(doc_id + chunk_index)`).
+     - Upsert points + payload (doc_id, chunk_index, text, title, url, dataset).
+6. **Completion**: progress reported; DB connections closed.
 
-1.  **Initialization**:
-    *   The script starts by connecting to the PostgreSQL database using the configuration copied from the search service.
-    *   It connects to the Qdrant vector database running on `localhost:6334` (via SSH tunnel).
-    *   It loads the `Qwen/Qwen3-Embedding-0.6B` model onto the GPU (if available). This model was chosen for its high retrieval performance and efficient 1024-dimensional vectors.
-
-2.  **Dataset Selection**:
-    *   It selects the "small" dataset from the database.
-    *   It uses the dataset name ("small") as the Qdrant collection name.
-
-3.  **Collection Setup**:
-    *   The `setup_qdrant` function checks if a collection named "small" exists.
-    *   If not, it creates it with `Cosine` distance metric and a vector size of 1024 (matching the model).
-
-4.  **Processing Loop**:
-    *   The script fetches all document IDs for the dataset.
-    *   It iterates through these IDs in batches of 100 documents.
-    *   For each batch, it fetches the full document content (title and body) from Postgres.
-
-5.  **Batch Processing (`process_batch`)**:
-    *   **Chunking**: Each document is split into smaller pieces using a "sliding window" strategy.
-        *   `chunk_text` uses the model's tokenizer to convert text into token IDs.
-        *   It slices these IDs into windows of 512 tokens with a 50-token overlap.
-        *   It decodes these slices back into text strings. This ensures we don't cut words in half and maintain context across boundaries.
-    *   **Embedding**: All chunks in the batch are sent to the GPU-accelerated model to generate 1024-dimensional vectors.
-    *   **ID Generation**: A deterministic UUID is generated for each chunk using `uuid5(doc_id + chunk_index)`. This ensures that if we re-run the pipeline, we generate the exact same IDs and overwrite duplicates instead of creating ghosts.
-    *   **Upsert**: The vectors, along with metadata (original text, doc_id, title, url), are uploaded to Qdrant in a single request.
-
-6.  **Completion**:
-    *   A progress bar (`tqdm`) shows the real-time status.
-    *   Once all batches are processed, the database connection is closed.
-
-## Architecture & Design Decisions
-
-### Why Chunking? (Dense Passage Retrieval)
-
-We employ a **Dense Passage Retrieval** strategy, which is the current industry standard for RAG systems.
-
-1.  **Precision**: Embedding entire documents dilutes specific details. By chunking documents into 512-token passages, we create focused vectors. When a user queries for a specific detail, the relevant chunk matches with high similarity, whereas a whole-document vector might be too generic.
-2.  **Context Management**: While LLMs have large context windows, we cannot feed them the entire corpus. Chunking allows us to retrieve only the most relevant "needles in the haystack."
-3.  **Resolution**: We store the `doc_id` in the metadata of every chunk. This allows the downstream application to map a retrieved passage back to its parent document, potentially fetching surrounding context for the LLM generation phase.
-
-This approach balances high retrieval accuracy with efficient storage and processing, making it ideal for the TREC RAG task.
-
----
-
-## High-Performance Pipelined Ingestion
-
-The ingestion pipeline uses a **3-stage pipelined architecture** with threading to maximize throughput by overlapping I/O-bound and compute-bound operations.
-
-### Pipeline Architecture
+### Local Pipeline Diagram
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  PREFETCH       │     │  EMBED          │     │  UPSERT         │
-│  (DB I/O)       │────▶│  (GPU Compute)  │────▶│  (Network I/O)  │
-│                 │     │                 │     │                 │
-│  Thread 1       │     │  Thread 2       │     │  Thread 3       │
-│  PostgreSQL     │     │  SentenceTransf │     │  Qdrant         │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-        │                       │                       │
-        ▼                       ▼                       ▼
-   doc_queue              points_queue            Progress Bar
-   (prefetch_size)        (prefetch_size)         Updates
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    Local Pipelined Ingestion (Chunked)                      │
+├────────────┬────────────────────┬──────────────────────┬────────────────────┤
+│  Prefetch  │    Chunk & Embed   │       Upsert         │      Progress      │
+│  (DB I/O)  │   (GPU/CPU compute)│     (Network I/O)    │      Metrics       │
+├────────────┼────────────────────┼──────────────────────┼────────────────────┤
+│ Thread T0  │  Thread(s) T1..Tk  │     Thread T(k+1)    │  tqdm w/ fetch/embed│
+│ PostgreSQL │  SentenceTransformer│      Qdrant client   │  /upsert docs/sec  │
+└────────────┴────────────────────┴──────────────────────┴────────────────────┘
+Queues: doc_queue (size = PREFETCH × workers), points_queue (same)
 ```
 
-### How It Works
+## Pipeline Walkthrough (Remote/OpenRouter)
 
-1. **Prefetch Thread**: Continuously fetches document batches from PostgreSQL and places them in `doc_queue`. This runs ahead of the GPU to ensure the embed thread never waits for data.
+1. **Initialization**: same DB/Qdrant wiring; configure OpenRouter API key.
+2. **Embedding**: call the remote embedding API; skip chunking thanks to larger context window.
+3. **Upsert**: identical Qdrant batching strategy.
+4. **Cost Awareness**: run under fixed budget; prioritize qrels-linked docs; add representative subset.
 
-2. **Embed Thread**: Takes document batches from `doc_queue`, chunks the text, generates embeddings using the GPU, and places the resulting points in `points_queue`.
-
-3. **Upsert Thread**: Takes points from `points_queue` and uploads them to Qdrant. Uses `wait=False` for async indexing.
-
-### Why This Design?
-
-| Component | Bottleneck Type | Solution |
-|-----------|-----------------|----------|
-| PostgreSQL fetch | Network I/O | Prefetch into queue |
-| Embedding generation | GPU compute | Dedicated thread, large batch sizes |
-| Qdrant upsert | Network I/O | Async upserts, batching |
-
-By running these in parallel, we ensure:
-- GPU never waits for database queries
-- Network uploads happen while GPU is computing
-- Memory is bounded by queue sizes
-
-### Configuration Parameters
-
-```python
-# --- PIPELINE CONFIGURATION ---
-BATCH_SIZE = 50           # Documents per processing batch
-QDRANT_UPSERT_BATCH = 200 # Points per Qdrant upsert call
-PREFETCH_BATCHES = 6      # Queue size between pipeline stages (see below)
-NUM_EMBED_WORKERS = 1     # Number of parallel embedding workers (see Multi-GPU section)
-
-# Resume capability
-RESUME_INGESTION = True   # Resume from last processed doc_id
-PURGE_COLLECTION = False  # Set True to start fresh
-```
-
-#### Understanding `PREFETCH_BATCHES` (Queue Buffering)
-
-`PREFETCH_BATCHES` controls the **queue size** between all pipeline stages, not just prefetch:
+### Remote Pipeline Diagram
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  PREFETCH       │     │  EMBED          │     │  UPSERT         │
-│  (DB I/O)       │────▶│  (GPU Compute)  │────▶│  (Network I/O)  │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-        │                       │                       
-        ▼                       ▼                       
-   doc_queue                points_queue            
-   maxsize = 6×workers      maxsize = 6×workers     
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                  Remote Embeddings (No Chunking)                            │
+├────────────┬───────────────────────────┬──────────────────────┬─────────────┤
+│  Prefetch  │      Embed via API        │       Upsert         │  Progress   │
+│  (DB I/O)  │   (OpenRouter service)    │     (Network I/O)    │  Metrics    │
+├────────────┼───────────────────────────┼──────────────────────┼─────────────┤
+│ Thread T0  │  Async HTTP requests      │     Thread T2        │  docs/sec   │
+│ PostgreSQL │  Larger context window    │     Qdrant client    │  per stage  │
+└────────────┴───────────────────────────┴──────────────────────┴─────────────┘
+Simplifies payload: one point per document (no chunk indices)
 ```
 
-**What it controls:**
+## Architecture & Design Notes
 
-| Queue | Purpose | Effect of `PREFETCH_BATCHES=6` |
-|-------|---------|-------------------------------|
-| `doc_queue` | Holds fetched documents waiting for embedding | Prefetch can run up to 6 batches ahead of GPU |
-| `points_queue` | Holds embedded points waiting for upsert | GPU can run up to 6 batches ahead of Qdrant |
+- **Chunking rationale**: improves passage-level retrieval for small-context models; removed when using larger-window remote model.
+- **Compute vs VRAM**: local runs were compute-bound; VRAM expansions didn’t unlock material throughput.
+- **Pipelining**: prefetch/embedding/upsert overlapped to keep GPU/network busy.
+- **Resume**: supports resuming from last processed `doc_id` to avoid re-ingest.
+ - **Deterministic IDs**: stable UUID generation prevents duplicates on re-runs.
+ - **Qdrant indexing**: `OptimizersConfigDiff(indexing_threshold=50000)` can delay heavy indexing during bulk upserts.
 
-**Behavior:**
+## Evaluation Linkage
 
-1. **If prefetch is fast, GPU is slow**: The `doc_queue` fills up (up to 6 batches), then prefetch blocks waiting for GPU to consume
-2. **If GPU is fast, upsert is slow**: The `points_queue` fills up (up to 6 batches), then GPU blocks waiting for Qdrant to consume
-3. **Buffering benefit**: Provides slack so temporary slowdowns in one stage don't immediately stall others
+- We ensured all qrels-referenced docs were embedded and present in the collection.
+- Run evaluation via the CLI in `backend/eval`; vector/hybrid modes consume this collection.
+ - Helper: notebook cell to fetch and persist `document_ids` from a collection (e.g., `small_openrouter_nc_doc_ids.json`).
 
-**Memory tradeoff:** Higher values = more documents buffered in RAM, but more resilience to latency spikes.
+## Practical Tips
 
-### Resume Capability
+- Under budget constraints, embed qrels first, then expand.
+- Monitor per-stage throughput (fetch/embed/upsert) to identify bottlenecks.
+- For notebooks: warm up models; verify tunnels; keep `QDRANT_UPSERT_BATCH` moderate to avoid timeouts.
 
-The pipeline supports **resumable ingestion**:
+## Cost Estimation (Remote)
 
-1. On startup, it queries Qdrant for all existing `doc_id` values
-2. Finds the maximum `doc_id` (lexicographically)
-3. Queries PostgreSQL for documents with `doc_id > last_processed`
-4. Only processes new documents
+- Pricing example: ~$0.05 per 1M tokens.
+- Tokens per doc: assume ~3,000.
+- Total tokens: `docs × tokens_per_doc`.
+- Cost: `total_tokens / 1e6 × $0.05`.
 
-This means you can:
-- Stop and restart the notebook at any time
-- Resume after crashes without reprocessing
-- Add new documents to the database and only ingest the delta
+Examples:
+- 100k docs → 300M tokens → $15.
+- 400k docs → 1.2B tokens → $60.
+- 1.6M docs → 4.8B tokens → $240. Overlaps, headers, and serialization overhead can add marginally to token counts.
 
-### Thread Safety
+Practical budgeting:
+- Run qrels set first; pre-calculate token budget for a candidate subset.
+- Prefer larger context window models to avoid chunking (reduces total tokens processed).
 
-- **PostgreSQL**: Uses `ThreadedConnectionPool` for thread-safe database access
-- **Qdrant**: Client is thread-safe; upserts use `wait=False` for async operation
-- **Queues**: Python's `queue.Queue` provides thread-safe producer-consumer pattern
-- **Stats**: Protected by `threading.Lock()` for accurate progress tracking
+## Configuration Reference (Key Knobs)
 
-### Multi-Model GPU Support (A100 / Large VRAM)
+- `BATCH_SIZE`: docs per batch for prefetch/embedding.
+- `QDRANT_UPSERT_BATCH`: points per upsert call; lower if timeouts occur over SSH.
+- `PREFETCH_BATCHES`: queue buffering; higher = more resilience, higher RAM.
+- `NUM_EMBED_WORKERS`: number of local model instances (only helpful if compute underutilized and VRAM available).
+- `RESUME_INGESTION`: skip already processed `doc_id`s.
+- `PURGE_COLLECTION`: delete and recreate collection for a clean slate.
 
-For GPUs with large VRAM (e.g., A100 40GB/80GB), the pipeline supports **multiple parallel embedding workers**, each with its own model instance:
+## Known Limitations & Learnings
 
-```python
-NUM_EMBED_WORKERS = 4  # Load 4 model instances for parallel embedding
-```
+- Local runs are compute-bound for embedding; adding VRAM alone doesn’t lift docs/sec significantly.
+- Chunking increases token volume and Qdrant points per document; use only when necessary.
+- SSH tunnels can introduce latency; keep `timeout` generous and upsert batches moderate.
+- Remote embeddings simplify ingestion and scale well, but require budget planning.
 
-**Architecture with Multiple Workers:**
 
-```
-┌─────────────────┐     ┌─────────────────┐
-│  PREFETCH       │     │  EMBED Worker 0 │──┐
-│  (DB I/O)       │────▶│  (GPU Compute)  │  │
-│                 │     └─────────────────┘  │     ┌─────────────────┐
-│  Thread 1       │     ┌─────────────────┐  ├────▶│  UPSERT         │
-│  PostgreSQL     │────▶│  EMBED Worker 1 │──┤     │  (Network I/O)  │
-└─────────────────┘     │  (GPU Compute)  │  │     │                 │
-        │               └─────────────────┘  │     │  Thread N+2     │
-        ▼               ┌─────────────────┐  │     │  Qdrant         │
-   doc_queue ──────────▶│  EMBED Worker N │──┘     └─────────────────┘
-   (prefetch * workers) │  (GPU Compute)  │               │
-                        └─────────────────┘               ▼
-                                                    Progress Bar
-```
-
-**VRAM Requirements (Qwen 0.6B):**
-
-| Workers | Approximate VRAM | Recommended GPU |
-|---------|------------------|-----------------|
-| 1 | ~3 GB | GTX 1080, RTX 3060 |
-| 2 | ~5 GB | RTX 3070, RTX 4070 |
-| 4 | ~10 GB | RTX 3090, RTX 4090 |
-| 8 | ~20 GB | A100 40GB |
-| 16 | ~40 GB | A100 80GB |
-
-**When to Use Multiple Workers:**
-
-| Scenario | `NUM_EMBED_WORKERS` | Reason |
-|----------|---------------------|--------|
-| Consumer GPU (8-12GB) | 1 | VRAM limited; single model optimal |
-| RTX 3090/4090 (24GB) | 2-4 | Extra VRAM available for parallelism |
-| A100 40GB | 4-8 | Plenty of VRAM; maximize throughput |
-| A100 80GB | 8-16 | Full utilization of available memory |
-
-**How It Works:**
-- Each worker thread loads its own `SentenceTransformer` model instance
-- Workers compete for batches from the shared `doc_queue`
-- All workers output to the same `points_queue` for upserting
-- The GPU scheduler interleaves work across model instances
-- Net effect: higher GPU utilization when I/O is a factor
-
-**Startup Output:**
-```
-Loading 4 embedding model instance(s): Qwen/Qwen3-Embedding-0.6B...
-  Loading model 1/4...
-  Loading model 2/4...
-  Loading model 3/4...
-  Loading model 4/4...
-✅ Loaded 4 model instance(s). Vector size: 1024
-   GPU Memory: 9.42 GB allocated, 10.00 GB reserved
-```
-
-### Single Model Instance Design
-
-The default implementation uses **one model instance on the GPU** (`NUM_EMBED_WORKERS=1`). This is appropriate for:
-
-| Scenario | Multiple Models? | Reason |
-|----------|------------------|--------|
-| Consumer GPU (8-24GB) | ❌ No | VRAM limited; single model saturates compute |
-| Small model, limited VRAM | ❌ No | Memory bandwidth contention negates benefits |
-| A100 / Large VRAM | ✅ Yes | Extra VRAM enables parallel model instances |
-| Multiple GPUs | ✅ Yes | One model per GPU would be optimal (future work) |
-| CPU only | ✅ Yes | Multiple instances can utilize multiple cores |
-
-For the Qwen 0.6B model on a single consumer GPU, the embedding generation saturates GPU compute. The pipelining ensures the GPU is never idle waiting for I/O, which is the optimal configuration.
-
-### Performance Tuning
-
-**If GPU utilization is low (<90%)**:
-- Increase `BATCH_SIZE` (more documents per batch)
-- Increase `embed_batch_size` in `_embed_worker` (currently 64)
-
-**If running out of VRAM**:
-- Decrease `BATCH_SIZE`
-- The pipeline auto-falls back to `batch_size=16` on OOM errors
-
-**If Qdrant times out**:
-- Decrease `QDRANT_UPSERT_BATCH`
-- The `timeout=300` should handle most cases over SSH tunnels
-
-**Typical Performance**: 30-80 docs/second depending on document length and GPU capability.
-
-### Bottleneck Analysis (Progress Bar Metrics)
-
-The progress bar displays **per-stage throughput** to help identify bottlenecks in real-time:
-
-```
-Ingesting:  45%|████▌     | 4500/10000 [02:15<02:45, 33.2docs/s, chunks=18234, fetch=85d/s, embed=42d/s, upsert=120d/s, batch=90/200]
-```
-
-**Metrics explained:**
-
-| Metric | Description |
-|--------|-------------|
-| `fetch=85d/s` | DB prefetch speed (docs/sec from PostgreSQL) |
-| `embed=42d/s` | Embedding speed (docs/sec through GPU) |
-| `upsert=120d/s` | Qdrant upsert speed (docs/sec to vector DB) |
-| `chunks=18234` | Total chunks created so far |
-| `batch=90/200` | Current batch / total batches |
-
-**Interpreting bottlenecks:**
-
-| Pattern | Bottleneck | Solution |
-|---------|------------|----------|
-| `fetch` << others | Database I/O | Increase `PREFETCH_BATCHES`, check SSH tunnel latency |
-| `embed` << others | GPU compute | Increase `NUM_EMBED_WORKERS` (if VRAM available), or use faster GPU |
-| `upsert` << others | Network/Qdrant | Decrease `QDRANT_UPSERT_BATCH`, check network latency |
-| All roughly equal | Balanced | Pipeline is well-tuned ✅ |
-
-The metrics use a **rolling average of the last 10 batches** for stability.
