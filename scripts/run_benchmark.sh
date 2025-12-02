@@ -33,39 +33,43 @@ else
     BENCHMARK=$(bash "${PROJECT_ROOT}/scripts/benchmark_helper.sh")
 fi
 
+# Get the Poetry venv path
+EVAL_DIR="${PROJECT_ROOT}/backend/eval"
+VENV_PYTHON="${EVAL_DIR}/.venv/bin/python"
+
 # Map mode to command
 # Pass through any additional arguments (e.g., --limit 5) after benchmark selection
 case "$MODE" in
   run-all)
-    cd "${PROJECT_ROOT}/backend/eval" && \
+    cd "${EVAL_DIR}" && \
     if [ ${#OTHER_ARGS[@]} -gt 0 ]; then
-      DEV=1 poetry run eval pipeline run-all "$BENCHMARK" --experiment-id benchmark_all_modes "${OTHER_ARGS[@]}"
+      DEV=1 "${VENV_PYTHON}" -m eval_cli.main pipeline run-all "$BENCHMARK" --experiment-id benchmark_all_modes "${OTHER_ARGS[@]}"
     else
-      DEV=1 poetry run eval pipeline run-all "$BENCHMARK" --experiment-id benchmark_all_modes
+      DEV=1 "${VENV_PYTHON}" -m eval_cli.main pipeline run-all "$BENCHMARK" --experiment-id benchmark_all_modes
     fi
     ;;
   lexical)
-    cd "${PROJECT_ROOT}/backend/eval" && \
+    cd "${EVAL_DIR}" && \
     if [ ${#OTHER_ARGS[@]} -gt 0 ]; then
-      DEV=1 poetry run eval pipeline run "$BENCHMARK" --mode lexical --experiment-id benchmark_lexical "${OTHER_ARGS[@]}"
+      DEV=1 "${VENV_PYTHON}" -m eval_cli.main pipeline run "$BENCHMARK" --mode lexical --experiment-id benchmark_lexical "${OTHER_ARGS[@]}"
     else
-      DEV=1 poetry run eval pipeline run "$BENCHMARK" --mode lexical --experiment-id benchmark_lexical
+      DEV=1 "${VENV_PYTHON}" -m eval_cli.main pipeline run "$BENCHMARK" --mode lexical --experiment-id benchmark_lexical
     fi
     ;;
   hybrid)
-    cd "${PROJECT_ROOT}/backend/eval" && \
+    cd "${EVAL_DIR}" && \
     if [ ${#OTHER_ARGS[@]} -gt 0 ]; then
-      DEV=1 poetry run eval pipeline run "$BENCHMARK" --mode hybrid --experiment-id benchmark_hybrid "${OTHER_ARGS[@]}"
+      DEV=1 "${VENV_PYTHON}" -m eval_cli.main pipeline run "$BENCHMARK" --mode hybrid --experiment-id benchmark_hybrid "${OTHER_ARGS[@]}"
     else
-      DEV=1 poetry run eval pipeline run "$BENCHMARK" --mode hybrid --experiment-id benchmark_hybrid
+      DEV=1 "${VENV_PYTHON}" -m eval_cli.main pipeline run "$BENCHMARK" --mode hybrid --experiment-id benchmark_hybrid
     fi
     ;;
   vector)
-    cd "${PROJECT_ROOT}/backend/eval" && \
+    cd "${EVAL_DIR}" && \
     if [ ${#OTHER_ARGS[@]} -gt 0 ]; then
-      DEV=1 poetry run eval pipeline run "$BENCHMARK" --mode vector --experiment-id benchmark_vector "${OTHER_ARGS[@]}"
+      DEV=1 "${VENV_PYTHON}" -m eval_cli.main pipeline run "$BENCHMARK" --mode vector --experiment-id benchmark_vector "${OTHER_ARGS[@]}"
     else
-      DEV=1 poetry run eval pipeline run "$BENCHMARK" --mode vector --experiment-id benchmark_vector
+      DEV=1 "${VENV_PYTHON}" -m eval_cli.main pipeline run "$BENCHMARK" --mode vector --experiment-id benchmark_vector
     fi
     ;;
   *)
