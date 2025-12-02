@@ -27,7 +27,9 @@ paths:
     rag24: "topics.rag24.test.txt"
     dl21: "topics.dl21.txt"
     dl22: "topics.dl22.txt"
+    dl22: "topics.dl22.txt"
     dl23: "topics.dl23.txt"
+    msmarco-dev: "topics.msmarco-v2-doc.dev.txt"
     msmarco-dev: "topics.msmarco-v2-doc.dev.txt"
     msmarco-dev2: "topics.msmarco-v2-doc.dev2.txt"
     rag25: "trec_rag_2025_queries.jsonl"
@@ -38,7 +40,9 @@ paths:
     rag24: "qrels.rag24.test-umbrela-all.txt"
     dl21: "qrels.dl21-doc-msmarco-v2.1.txt"
     dl22: "qrels.dl22-doc-msmarco-v2.1.txt"
+    dl22: "qrels.dl22-doc-msmarco-v2.1.txt"
     dl23: "qrels.dl23-doc-msmarco-v2.1.txt"
+    msmarco-dev: "qrels.msmarco-v2.1-doc.dev.txt"
     msmarco-dev: "qrels.msmarco-v2.1-doc.dev.txt"
     msmarco-dev2: "qrels.msmarco-v2.1-doc.dev2.txt"
     rag25: null  # Organizer qrels pending; CLI guards and prompts for override
@@ -94,6 +98,7 @@ trec_eval:
     - "map_cut.100"
     - "recip_rank"
     - "recall.25"
+    - "recall.50"
     - "recall.50"
     - "recall.100"
 

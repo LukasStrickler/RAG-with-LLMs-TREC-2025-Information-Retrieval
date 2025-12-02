@@ -248,7 +248,7 @@ class HybridRetriever:
         list1: list[SearchResult],
         list2: list[SearchResult],
         limit: int = 10,
-        k: int = 60,
+        k: int = 10,
     ) -> list[SearchResult]:
         """
         Reciprocal Rank Fusion.
