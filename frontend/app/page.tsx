@@ -29,11 +29,12 @@ export default function Home() {
       setResults(segments);
     } catch (err) {
       console.error("Search error:", err);
-      const errorMessage = err instanceof Error
-        ? err.message
-        : typeof err === "string"
-          ? err
-          : "An unexpected error occurred";
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : typeof err === "string"
+            ? err
+            : "An unexpected error occurred";
       setError(errorMessage);
       setResults([]);
     } finally {
@@ -55,8 +56,9 @@ export default function Home() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div
-          className={`flex flex-col items-center gap-8 transition-all duration-300 ${searchPerformed ? "mt-4" : "mt-32"
-            }`}
+          className={`flex flex-col items-center gap-8 transition-all duration-300 ${
+            searchPerformed ? "mt-4" : "mt-32"
+          }`}
         >
           {/* Search Bar */}
           <SearchBar
