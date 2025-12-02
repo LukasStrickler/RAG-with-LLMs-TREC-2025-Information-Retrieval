@@ -23,6 +23,7 @@ def run(
     topics: str = typer.Argument(..., help="Topic file (rag24, rag25) or path"),
     output: Path = typer.Option(None, help="Output file for responses"),
     top_k: int = typer.Option(100, help="Number of results per query"),
+    rerank: bool = typer.Option(True, help="Apply cross-encoder reranking"),
 ) -> None:
     """Generate retrieval responses for topics via API."""
     try:
@@ -61,8 +62,12 @@ def run(
             topic_set,
             mode="hybrid",
             top_k=top_k,
+            rerank=rerank,
         )
-        console.print(f"[green]✓ Generated {len(responses)} responses[/green]")
+        rerank_status = " (with reranking)" if rerank else ""
+        console.print(
+            f"[green]✓ Generated {len(responses)} responses{rerank_status}[/green]"
+        )
     except RuntimeError as e:
         console.print(f"[red]API Error: {e}[/red]")
         raise typer.Exit(1)

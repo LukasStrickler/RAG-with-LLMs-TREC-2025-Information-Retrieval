@@ -41,6 +41,7 @@ class APIRetrievalClient:
         topics: TopicSet,
         mode: RetrievalMode = "hybrid",
         top_k: int = 100,
+        rerank: bool = False,
     ) -> dict[str, QueryResult]:
         """Retrieve responses for all topics via API."""
 
@@ -51,7 +52,7 @@ class APIRetrievalClient:
         ]
 
         # Create simplified request with mode and queries
-        request = RetrievalRequest(mode=mode, queries=queries)
+        request = RetrievalRequest(mode=mode, queries=queries, rerank=rerank)
 
         url = f"{self.base_url}/api/v1/retrieve"
         logger.info(
@@ -64,7 +65,15 @@ class APIRetrievalClient:
 
         # Make API call
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
+            # Use Timeout object for better control - set read timeout to config value
+            # Connect timeout is shorter (30s), read timeout is longer for large requests
+            timeout = httpx.Timeout(
+                connect=30.0,  # Connection timeout: 30 seconds
+                read=self.timeout,  # Read timeout: from config (for long-running reranking)
+                write=30.0,  # Write timeout: 30 seconds
+                pool=30.0,  # Pool timeout: 30 seconds
+            )
+            async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.post(
                     url,
                     json=request.model_dump(),
@@ -145,6 +154,7 @@ class APIRetrievalClient:
         topics: TopicSet,
         mode: RetrievalMode = "hybrid",
         top_k: int = 100,
+        rerank: bool = False,
     ) -> dict[str, QueryResult]:
         """Synchronous wrapper for CLI commands."""
-        return asyncio.run(self.retrieve_batch(topics, mode, top_k))
+        return asyncio.run(self.retrieve_batch(topics, mode, top_k, rerank))

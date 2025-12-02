@@ -46,12 +46,15 @@ npm run benchmark -- --msmarco-dev  # Override: use msmarco-dev
 # Run specific retrieval mode
 npm run benchmark:lexical            # Lexical mode, rag23 (default)
 npm run benchmark:lexical -- --24   # Lexical mode, rag24
+npm run benchmark:lexical -- --limit 5  # Lexical mode with 5 queries only
 
 npm run benchmark:hybrid            # Hybrid mode, rag23 (default)
 npm run benchmark:hybrid -- --24     # Hybrid mode, rag24
+npm run benchmark:hybrid -- --limit 5  # Hybrid mode with 5 queries only
 
 npm run benchmark:vector            # Vector mode, rag23 (default)
 npm run benchmark:vector -- --24     # Vector mode, rag24
+npm run benchmark:vector -- --limit 5  # Vector mode with 5 queries only
 
 # Available benchmark flags:
 # --23, --rag23    → TREC DL 2023 (default)
@@ -68,9 +71,11 @@ npm run benchmark:vector -- --24     # Vector mode, rag24
 ```bash
 # Run evaluation for a single mode
 poetry run eval pipeline run rag23 --mode hybrid
+poetry run eval pipeline run rag23 --mode lexical --limit 5  # Limit to 5 queries
 
 # Run evaluation for all modes and compare
 poetry run eval pipeline run-all rag23 --experiment-id baseline_v1
+poetry run eval pipeline run-all rag23 --limit 5  # Limit to 5 queries for all modes
 
 # List previous experiments
 poetry run eval pipeline list
@@ -78,6 +83,8 @@ poetry run eval pipeline list
 # Compare two experiments
 poetry run eval pipeline compare experiment1 experiment2
 ```
+
+**Query Limiting:** Use `--limit N` to process only the first N queries and filter qrels accordingly. Useful for quick testing.
 
 ## Architecture
 

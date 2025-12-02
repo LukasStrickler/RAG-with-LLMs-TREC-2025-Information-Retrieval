@@ -24,3 +24,6 @@ class RetrievalRequest(BaseModel):
         default="hybrid", description="Retrieval mode: lexical, vector, or hybrid"
     )
     queries: list[Query] = Field(..., description="Queries to process", min_items=1)
+    rerank: bool = Field(
+        default=False, description="Apply cross-encoder reranking to results"
+    )

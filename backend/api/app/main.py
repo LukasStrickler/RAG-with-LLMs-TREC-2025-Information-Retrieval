@@ -18,6 +18,7 @@ from app.endpoints.health.router import router as health_router
 from app.endpoints.metadata.router import router as metadata_router
 from app.endpoints.retrieve.router import router as retrieve_router
 from app.services.retrieve.service import RetrievalService
+from app.services.rerank.rerank import CrossEncoderReranker
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -48,6 +49,18 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         # We might want to continue even if retrieval fails, or exit.
         # For now, we continue but service won't be available.
         app.state.retrieval_service = None
+
+    # Initialize reranker service
+    logger.info("Initializing cross-encoder reranker...")
+    try:
+        reranker = CrossEncoderReranker(
+            model_name="cross-encoder/ms-marco-MiniLM-L6-v2"
+        )
+        app.state.reranker = reranker
+        logger.info("✓ Reranker service initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize reranker: {e}")
+        app.state.reranker = None
 
     yield
 
