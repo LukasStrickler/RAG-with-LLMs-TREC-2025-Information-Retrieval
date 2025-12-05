@@ -4,3 +4,4 @@ qdrant-client
 tqdm
 paramiko
 requests
+python-dotenv

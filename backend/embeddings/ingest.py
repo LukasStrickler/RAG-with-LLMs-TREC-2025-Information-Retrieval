@@ -15,6 +15,10 @@ import uuid
 import argparse
 from typing import List, Dict, Any, Set
 
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
+
 # Add shared module to path if not installed
 sys.path.append(
     os.path.abspath(os.path.join(os.path.dirname(__file__), "../../shared/src"))
@@ -39,17 +43,17 @@ except ImportError:
 
 # Configuration
 DB_CONFIG = {
-    "host": "127.0.0.1",
-    "port": 5433,
-    "database": "postgres",
-    "user": "postgres",
-    "password": "9IiVCS9s9ejH3QKO1aaFLyRzjAoTF87zZwp7cK0y0ofZoDvdq2uxF5OLm1hyAnRl",
-    "sslmode": "disable",
+    "host": os.getenv("DB_HOST", "127.0.0.1"),
+    "port": int(os.getenv("DB_PORT", "5433")),
+    "database": os.getenv("PG_DB", "postgres"),
+    "user": os.getenv("PG_USER", "postgres"),
+    "password": os.getenv("PG_PASS"),
+    "sslmode": os.getenv("DB_SSLMODE", "disable"),
 }
 
-QDRANT_HOST = "127.0.0.1"
-QDRANT_PORT = 6333
-QDRANT_API_KEY = "DkJsZtSFdDjCClMz2vv5qAJmmrq2Si74"
+QDRANT_HOST = os.getenv("QDRANT_HOST", "127.0.0.1")
+QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 
 # Model Selection:
 # We chose 'Qwen/Qwen3-Embedding-0.6B' based on the MTEB leaderboard.

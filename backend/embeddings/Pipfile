@@ -3,19 +3,18 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 name = "pypi"
 
-[[source]]
-url = "https://download.pytorch.org/whl/cu130"
-verify_ssl = true
-name = "pytorch"
+# CUDA-specific torch wheel index removed for macOS compatibility.
 
 [packages]
-torch = {version = "*", index = "pytorch"}
+# Use default PyPI torch; Pipenv will pick the right wheel (CPU or macOS MPS).
+torch = "*"
 sentence-transformers = "*"
 qdrant-client = "*"
 psycopg2-binary = "*"
 tqdm = "*"
 pydantic = "*"
 python-dotenv = "*"
+notebook = "*"
 
 [dev-packages]
 

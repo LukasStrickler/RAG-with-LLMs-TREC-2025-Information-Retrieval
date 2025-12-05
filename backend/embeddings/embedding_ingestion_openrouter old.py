@@ -14,48 +14,53 @@ from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from tqdm import tqdm
 import paramiko
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # ==========================================
 # 1. GLOBAL CONFIGURATION
 # ==========================================
 
 # --- OPENROUTER API ---
-OPENROUTER_API_KEY = "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"
-OPENROUTER_URL = "https://openrouter.ai/api/v1/embeddings"
-EMBEDDING_MODEL = "qwen/qwen3-embedding-8b" 
-PRICE_PER_1M_TOKENS = 0.05 
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_URL = os.getenv("OPENROUTER_URL", "https://openrouter.ai/api/v1/embeddings")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "qwen/qwen3-embedding-8b")
+PRICE_PER_1M_TOKENS = float(os.getenv("PRICE_PER_1M_TOKENS", "0.05"))
 
 # --- SSH / NETWORK ---
-SSH_USE = False
-SSH_HOST = "95.216.74.52"
-SSH_USER = "lean"
-SSH_PASSWORD = "l+VHTcsLfsdEiXlv"
+SSH_USE = os.getenv("SSH_USE", "false").lower() == "true"
+SSH_HOST = os.getenv("SSH_HOST")
+SSH_USER = os.getenv("SSH_USER")
+SSH_PASSWORD = os.getenv("SSH_PASSWORD")
 
 # --- REMOTE IPs ---
-PG_REMOTE_IP = "10.0.1.7"
-QDRANT_REMOTE_IP = "10.0.3.2"
+PG_REMOTE_IP = os.getenv("PG_REMOTE_IP", "10.0.1.7")
+QDRANT_REMOTE_IP = os.getenv("QDRANT_REMOTE_IP", "10.0.3.2")
 
 # --- LOCAL PORTS ---
-PG_LOCAL_PORT = 5432
-QDRANT_HTTP_PORT = 6333
+PG_LOCAL_PORT = int(os.getenv("PG_LOCAL_PORT", "5432"))
+QDRANT_HTTP_PORT = int(os.getenv("QDRANT_HTTP_PORT", "6333"))
 
 # --- POSTGRES AUTH ---
-PG_DB = "postgres"
-PG_USER = "postgres"
-PG_PASS = "9IiVCS9s9ejH3QKO1aaFLyRzjAoTF87zZwp7cK0y0ofZoDvdq2uxF5OLm1hyAnRl"
+PG_DB = os.getenv("PG_DB", "postgres")
+PG_USER = os.getenv("PG_USER", "postgres")
+PG_PASS = os.getenv("PG_PASS")
 
 # --- PIPELINE CONFIG ---
-DATASET_NAME = "small"
-COLLECTION_NAME = "small_openrouter_nc"
-BATCH_SIZE = 500
-MAX_TOKENS_PER_DOC = 30000  # Max tokens before truncating (model limit is 33k)
+DATASET_NAME = os.getenv("DATASET_NAME", "small")
+COLLECTION_NAME = os.getenv("SOURCE_COLLECTION", "small_openrouter_nc")
+BATCH_SIZE = int(os.getenv("BATCH_SIZE", "500"))
+MAX_TOKENS_PER_DOC = int(os.getenv("MAX_TOKENS_PER_DOC", "30000"))  # Max tokens before truncating (model limit is 33k)
 
 # --- QUEUE CONFIG ---
-MAX_QUEUE_SIZE = 20 # Backpressure limit: Pause API calls if 5 batches are waiting for upsert
-NUM_EMBED_WORKERS = 15 # Number of threads making API calls
+MAX_QUEUE_SIZE = int(os.getenv("MAX_QUEUE_SIZE", "20"))  # Backpressure limit: Pause API calls if 5 batches are waiting for upsert
+NUM_EMBED_WORKERS = int(os.getenv("NUM_EMBED_WORKERS", "15"))  # Number of threads making API calls
 
 # --- QDRANT CONFIG ---
-QDRANT_UPSERT_BATCH_SIZE = 300  # Max points per Qdrant upsert (to avoid payload size limits)
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
+QDRANT_UPSERT_BATCH_SIZE = int(os.getenv("QDRANT_UPSERT_BATCH_SIZE", "300"))  # Max points per Qdrant upsert (to avoid payload size limits)
 
 
 # --- PATCH PARAMIKO ---
@@ -498,7 +503,7 @@ def execute_pipeline():
         # host='127.0.0.1', 
         host='10.0.3.2',  # When running on server directly
         port=QDRANT_HTTP_PORT, 
-        api_key="DkJsZtSFdDjCClMz2vv5qAJmmrq2Si74", 
+        api_key=QDRANT_API_KEY, 
         https=False,
         timeout=120
     )
