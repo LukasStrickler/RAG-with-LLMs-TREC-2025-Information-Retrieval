@@ -191,6 +191,7 @@ Key model categories:
 | `npm run benchmark:hybrid -- --24` | Run hybrid benchmark with rag24 override |
 | `npm run benchmark:vector` | Run evaluation for vector retrieval mode only, default: rag23 |
 | `npm run benchmark:vector -- --24` | Run vector benchmark with rag24 override |
+| `npm run benchmark:lexical -- --no-rerank` | Run benchmark without cross-encoder reranking (faster, baseline comparison) |
 
 ## Team
 - Lean Fürst — [lean.henriques.fuerst@students.uni-mannheim.de](mailto:lean.henriques.fuerst@students.uni-mannheim.de)

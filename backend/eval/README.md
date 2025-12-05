@@ -47,14 +47,17 @@ npm run benchmark -- --msmarco-dev  # Override: use msmarco-dev
 npm run benchmark:lexical            # Lexical mode, rag23 (default)
 npm run benchmark:lexical -- --24   # Lexical mode, rag24
 npm run benchmark:lexical -- --limit 5  # Lexical mode with 5 queries only
+npm run benchmark:lexical -- --no-rerank  # Lexical mode without reranking
 
 npm run benchmark:hybrid            # Hybrid mode, rag23 (default)
 npm run benchmark:hybrid -- --24     # Hybrid mode, rag24
 npm run benchmark:hybrid -- --limit 5  # Hybrid mode with 5 queries only
+npm run benchmark:hybrid -- --no-rerank  # Hybrid mode without reranking
 
 npm run benchmark:vector            # Vector mode, rag23 (default)
 npm run benchmark:vector -- --24     # Vector mode, rag24
 npm run benchmark:vector -- --limit 5  # Vector mode with 5 queries only
+npm run benchmark:vector -- --no-rerank  # Vector mode without reranking
 
 # Available benchmark flags:
 # --23, --rag23    → TREC DL 2023 (default)
@@ -72,10 +75,12 @@ npm run benchmark:vector -- --limit 5  # Vector mode with 5 queries only
 # Run evaluation for a single mode
 poetry run eval pipeline run rag23 --mode hybrid
 poetry run eval pipeline run rag23 --mode lexical --limit 5  # Limit to 5 queries
+poetry run eval pipeline run rag23 --mode hybrid --no-rerank  # Disable reranking
 
 # Run evaluation for all modes and compare
 poetry run eval pipeline run-all rag23 --experiment-id baseline_v1
 poetry run eval pipeline run-all rag23 --limit 5  # Limit to 5 queries for all modes
+poetry run eval pipeline run-all rag23 --no-rerank  # Disable reranking for all modes
 
 # List previous experiments
 poetry run eval pipeline list
@@ -294,9 +299,15 @@ npm run benchmark:vector -- --24     # Vector (semantic), rag24
 ```bash
 # Run single mode evaluation
 poetry run eval pipeline run rag23 --mode hybrid --experiment-id test1
+poetry run eval pipeline run rag23 --mode hybrid --no-rerank  # Without reranking
 
 # Run all modes and compare
 poetry run eval pipeline run-all rag23 --experiment-id baseline_v1
+poetry run eval pipeline run-all rag23 --no-rerank  # Without reranking
+
+# Run benchmark (hybrid mode)
+poetry run eval pipeline benchmark rag23
+poetry run eval pipeline benchmark rag23 --no-rerank  # Without reranking
 
 # List previous experiments
 poetry run eval pipeline list
@@ -343,6 +354,22 @@ Set the mode via:
 - CLI argument: `--mode hybrid`
 - Config file: `retrieval.default_mode`
 - Environment variable: `API_MODE` (future)
+
+## Reranking
+
+By default, all pipeline commands apply cross-encoder reranking to improve result quality. Reranking uses a cross-encoder model (`sentence-transformers/ms-marco-MiniLM-L6-v2`) to re-score and reorder the top candidates.
+
+**Disable reranking:**
+```bash
+# For single mode runs
+poetry run eval pipeline run rag23 --mode hybrid --no-rerank
+
+# For all modes
+poetry run eval pipeline run-all rag23 --no-rerank
+
+# For benchmarks
+poetry run eval pipeline benchmark rag23 --no-rerank
+```
 
 ## KPI Tracking
 

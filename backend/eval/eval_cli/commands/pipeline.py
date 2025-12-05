@@ -96,6 +96,7 @@ def run(
     output_dir: Path = typer.Option(None, help="Output directory"),
     top_k: int = typer.Option(100, help="Number of results per query"),
     limit: int = typer.Option(None, help="Limit number of queries to process"),
+    rerank: bool = typer.Option(True, help="Apply cross-encoder reranking"),
 ) -> None:
     """
     Run complete evaluation pipeline for a retrieval mode.
@@ -193,7 +194,7 @@ def run(
         task2 = progress.add_task("Generating responses via API...", total=None)
         try:
             client = APIRetrievalClient(config)
-            responses = client.retrieve_batch_sync(topic_set, mode, top_k, rerank=True)
+            responses = client.retrieve_batch_sync(topic_set, mode, top_k, rerank=rerank)
             progress.update(task2, description=f"Generated {len(responses)} responses")
         except RuntimeError as e:
             console.print(f"[red]API Error: {e}[/red]")
@@ -290,6 +291,7 @@ def benchmark(
     topics: str = typer.Argument(..., help="Topic file (rag23, rag25) or path"),
     output_dir: Path = typer.Option(None, help="Output directory"),
     limit: int = typer.Option(None, help="Limit number of queries to process"),
+    rerank: bool = typer.Option(True, help="Apply cross-encoder reranking"),
 ) -> None:
     """Run pipeline benchmark in hybrid mode."""
     try:
@@ -353,7 +355,7 @@ def benchmark(
                     f"[yellow]⚠️  Limiting to first {limit} queries (from {filtered_count} with qrels)[/yellow]"
                 )
         client = APIRetrievalClient(config)
-        responses = client.retrieve_batch_sync(topic_set, mode="hybrid", top_k=100, rerank=True)
+        responses = client.retrieve_batch_sync(topic_set, mode="hybrid", top_k=100, rerank=rerank)
     except FileNotFoundError as e:
         console.print(f"[red]Error: Topic file not found: {e}[/red]")
         raise typer.Exit(1)
@@ -456,6 +458,7 @@ def run_all_modes(
     output_dir: Path = typer.Option(None, help="Output directory for results"),
     top_k: int = typer.Option(100, help="Number of results per query (default: 100)"),
     limit: int = typer.Option(None, help="Limit number of queries to process"),
+    rerank: bool = typer.Option(True, help="Apply cross-encoder reranking"),
 ) -> None:
     """
     Run evaluation pipeline for ALL retrieval modes (lexical, vector, hybrid).
@@ -553,7 +556,7 @@ def run_all_modes(
         # Use the already-loaded (and potentially limited) topic_set
         try:
             client = APIRetrievalClient(config)
-            responses = client.retrieve_batch_sync(topic_set, mode, top_k, rerank=True)
+            responses = client.retrieve_batch_sync(topic_set, mode, top_k, rerank=rerank)
         except FileNotFoundError as e:
             console.print(f"[red]Error: Topic file not found: {e}[/red]")
             raise typer.Exit(1)
