@@ -11,7 +11,7 @@ services:
       - SOLR_JAVA_MEM=-Xms512m -Xmx512m
     volumes:
       - solr_data:/var/solr
-    # We override the default command to create multiple cores at startup
+    # We override the default command to create multiple cores at startup to prepare the environment to host multiple datasets
     command:
       - bash
       - "-c"

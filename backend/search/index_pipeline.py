@@ -7,7 +7,8 @@ from db import Database
 from solr import SolrIndexer
 
 
-# Configuration
+# Configuration password is non critical since the db is never publicly reachable - hardcoded for simplicity
+# For a local setup change as needed
 DB_CONFIG = {
     'host': '127.0.0.1',
     'port': 5433,

@@ -35,8 +35,6 @@ class SolrIndexer:
                     pbar.update(len(batch))
                 except requests.exceptions.RequestException as e:
                     pbar.write(f"Error: {str(e)[:80]}")
-        
-        # Commit
         try:
             requests.post(
                 self.commit_url,
