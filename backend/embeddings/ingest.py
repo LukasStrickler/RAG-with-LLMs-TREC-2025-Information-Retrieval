@@ -41,19 +41,19 @@ except ImportError:
     # Mock classes if import fails to allow script to run (or fail gracefully later)
     ChunkingSpec = Any
 
-# Configuration
+# Configuration - Local Docker Setup
 DB_CONFIG = {
-    "host": os.getenv("DB_HOST", "127.0.0.1"),
-    "port": int(os.getenv("DB_PORT", "5433")),
+    "host": os.getenv("DB_HOST", "localhost"),
+    "port": int(os.getenv("DB_PORT", "5433")),  # Docker exposes PostgreSQL on 5433
     "database": os.getenv("PG_DB", "postgres"),
     "user": os.getenv("PG_USER", "postgres"),
-    "password": os.getenv("PG_PASS"),
+    "password": os.getenv("PG_PASS", "password"),  # Default from docker-compose.yml
     "sslmode": os.getenv("DB_SSLMODE", "disable"),
 }
 
-QDRANT_HOST = os.getenv("QDRANT_HOST", "127.0.0.1")
-QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
-QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
+QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
+QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))  # Docker exposes Qdrant on 6333
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", None)  # No API key for local Docker
 
 # Model Selection:
 # We chose 'Qwen/Qwen3-Embedding-0.6B' based on the MTEB leaderboard.

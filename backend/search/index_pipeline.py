@@ -14,7 +14,7 @@ DB_CONFIG = {
     'port': 5433,
     'database': 'postgres',
     'user': 'postgres',
-    'password': '9IiVCS9s9ejH3QKO1aaFLyRzjAoTF87zZwp7cK0y0ofZoDvdq2uxF5OLm1hyAnRl',
+    'password': 'password',
     'sslmode': 'disable'
 }
 
