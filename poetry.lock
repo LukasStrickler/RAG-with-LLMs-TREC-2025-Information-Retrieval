@@ -27,6 +27,7 @@ files = [
 [package.dependencies]
 idna = ">=2.8"
 sniffio = ">=1.1"
+typing_extensions = {version = ">=4.5", markers = "python_version < \"3.13\""}
 
 [package.extras]
 trio = ["trio (>=0.31.0)"]
@@ -1213,7 +1214,11 @@ files = [
 [package.dependencies]
 grpcio = ">=1.41.0"
 httpx = {version = ">=0.20.0", extras = ["http2"]}
-numpy = {version = ">=2.1.0", markers = "python_version >= \"3.13\""}
+numpy = [
+    {version = ">=1.21", markers = "python_version >= \"3.10\" and python_version < \"3.12\""},
+    {version = ">=1.26", markers = "python_version == \"3.12\""},
+    {version = ">=2.1.0", markers = "python_version >= \"3.13\""},
+]
 portalocker = ">=2.7.0,<4.0"
 protobuf = ">=3.20.0"
 pydantic = ">=1.10.8,<2.0.dev0 || >2.2.0"
@@ -1346,5 +1351,5 @@ zstd = ["zstandard (>=0.18.0)"]
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.13,<3.15"
-content-hash = "2617b9c4bec15fd799881e5102fca04b14c27ec72b2950490be615c7a54a0832"
+python-versions = ">=3.11,<3.15"
+content-hash = "bde655726e31e899f78221278f7ca6716bf86573b9293a671d1e2e27bf587429"

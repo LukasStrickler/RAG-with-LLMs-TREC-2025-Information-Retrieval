@@ -107,7 +107,7 @@ class Settings(BaseSettings):
     # Solr/Qdrant Configuration
     solr_core: str = Field(default="small", description="Solr core name")
     qdrant_collection: str = Field(
-        default="documents", description="Qdrant collection name"
+        default="small", description="Qdrant collection name"
     )
     qdrant_api_key: str | None = Field(default=None, description="Qdrant API Key")
 

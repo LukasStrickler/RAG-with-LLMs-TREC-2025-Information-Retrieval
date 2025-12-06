@@ -26,6 +26,7 @@ poetry run python backend/search/index_pipeline.py --dataset "MS MARCO" --core s
 npm run backend:dev
 
 # Start frontend (Terminal 2)
+cd frontend
 npm run dev
 ```
 
@@ -39,11 +40,19 @@ npm run dev
 ## Optional: Vector Search
 
 ```bash
-# Generate embeddings (500h+ on m4pro) hours on CPU)
+# Generate embeddings (500h+ on m4pro) hours on CPU), requires beefy GPU to run 8B model localy. 
 cd backend/embeddings && pipenv install && pipenv run python ingest.py --dataset "MS MARCO" --batch-size 100
+
+# There is also the option to run remote embeddings using openrouter. For this there is another script for this to run one needs to fill all needed vars, like in the given .env.example. There is an openrouter api key needed with sufficient balance ($250 for full job)
+cd backend/embeddings && pipenv install && pipenv run python embedding_ingestion_openrouter.py --dataset "MS MARCO" --batch-size 100
 
 # Install Ollama for query embeddings
 curl -fsSL https://ollama.com/install.sh | sh && ollama pull qwen3-embedding:8b
+
+# on mac
+brew install ollama
+brew services start ollama
+ollama pull qwen3-embedding:8b
 ```
 
 ## Troubleshooting

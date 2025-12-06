@@ -136,7 +136,7 @@ def process_batch(
 
     # Embed all documents in batch
     embeddings = model.encode(
-        texts_to_embed, batch_size=32, show_progress_bar=False, convert_to_numpy=True
+        texts_to_embed, batch_size=1, show_progress_bar=False, convert_to_numpy=True
     )
 
     # Create points for upsert
