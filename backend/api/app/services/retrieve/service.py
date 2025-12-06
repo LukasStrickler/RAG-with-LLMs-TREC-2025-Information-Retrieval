@@ -247,7 +247,7 @@ class RetrievalService:
             4096-dimensional embedding vector
         """
         url = "http://localhost:11434/api/embeddings"
-        payload = {"model": "qwen3-embedding:8b", "prompt": text}
+        payload = {"model": "qwen3-embedding:0.6b", "prompt": text}
 
         last_error = None
 
