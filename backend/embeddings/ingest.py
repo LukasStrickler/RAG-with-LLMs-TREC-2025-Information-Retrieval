@@ -32,8 +32,6 @@ from sentence_transformers import SentenceTransformer
 
 from db import Database
 
-
-
 # Configuration - Local Docker Setup
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "localhost"),
