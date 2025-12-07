@@ -3,28 +3,35 @@
 ## Quick Start
 
 ```bash
-# 1. Install Git LFS and pull large files (dataset + backup splits)
+# 1. Install Git LFS and pull large files
 brew install git-lfs && git lfs install && git lfs pull
 
-# 2. Initialize storage and start Docker services (~5 min to extract)
+# 2. Initialize storage and start Docker services (~5 min)
 ./scripts/setup.sh
 
 # 3. Install dependencies
-poetry install && cd backend/api && poetry install && cd ../eval && poetry install && cd ../../frontend && npm install && cd ..
+poetry install
+cd backend/api && poetry install && cd ../..
+cd backend/eval && poetry install && cd ../..
+cd frontend && npm install && cd ..
 
-# 4. Start backend (Terminal 1)
+# 4. Setup environment files
+cp backend/api/.env.example backend/api/.env
+cp backend/eval/.env.example backend/eval/.env
+
+# 5. Start backend (Terminal 1)
 npm run backend:dev
 
-# 5. Start frontend (Terminal 2)
+# 6. Start frontend (Terminal 2)
 cd frontend && npm run dev
 ```
 
 ## What's Included
 
 Pre-built storage backups contain:
-- **PostgreSQL**: 1.6M MS MARCO documents with metadata (4.3GB compressed)
-- **Solr**: 1.6M MS MARCO documents, BM25 indexed (5.2GB)
-- **Qdrant**: Vector embeddings with Qwen/Qwen3-Embedding-0.6B (6.3GB)
+- **PostgreSQL**: 1.6M MS MARCO documents with metadata 
+- **Solr**: 1.6M MS MARCO documents, BM25 indexed 
+- **Qdrant**: Vector embeddings with Qwen/Qwen3-Embedding-0.6B 
 
 ## Access
 
@@ -59,8 +66,11 @@ pipenv run python embedding_ingestion_openrouter.py --dataset "MS MARCO" --batch
 ## Run Evaluations
 
 ```bash
-cd backend/eval
-poetry run eval-cli run trec-dl-23
+# Download TREC evaluation assets (first time only)
+bash scripts/pull_qrels.sh
+
+# Run evaluation
+cd backend/eval && poetry run eval-cli run trec-dl-23
 ```
 
 

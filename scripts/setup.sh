@@ -13,12 +13,12 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 # Step 1: Initialize storage
-echo "Step 1/3: Initializing storage from backups..."
+echo "Step 1/4: Initializing storage from backups..."
 "$SCRIPT_DIR/init-storage.sh" "$@"
 
 # Step 2: Start Docker services
 echo ""
-echo "Step 2/3: Starting Docker services..."
+echo "Step 2/4: Starting Docker services..."
 cd "$PROJECT_ROOT"
 
 if docker-compose ps | grep -q "Up"; then
@@ -35,7 +35,7 @@ fi
 
 # Step 3: Wait for services to be ready
 echo ""
-echo "Step 3/3: Waiting for services to be ready..."
+echo "Step 3/4: Waiting for services to be ready..."
 
 wait_for_service() {
     local name="$1"
