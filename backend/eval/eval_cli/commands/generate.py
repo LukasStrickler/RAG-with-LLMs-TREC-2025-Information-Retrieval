@@ -58,12 +58,13 @@ def run(
     # Generate responses via API
     try:
         client = APIRetrievalClient(config)
-        responses = client.retrieve_batch_sync(
+        batch_response = client.retrieve_batch_sync(
             topic_set,
             mode="hybrid",
             top_k=top_k,
             rerank=rerank,
         )
+        responses = batch_response.results
         rerank_status = " (with reranking)" if rerank else ""
         console.print(
             f"[green]✓ Generated {len(responses)} responses{rerank_status}[/green]"
@@ -91,12 +92,23 @@ def run(
         console.print(f"[red]Error creating output directory: {e}[/red]")
         raise typer.Exit(1)
 
-    # Convert to serializable format
+    # Convert to serializable format with API metadata
     try:
         responses_json = {qid: resp.model_dump() for qid, resp in responses.items()}
+        
+        # Include API metadata in the output
+        output_data = {
+            "api_metadata": {
+                "dataset_version": batch_response.dataset_version,
+                "config_hash": batch_response.config_hash,
+                "schema_version": batch_response.schema_version,
+                "request_id": batch_response.request_id,
+            },
+            "responses": responses_json,
+        }
 
         with open(output, "w", encoding="utf-8") as f:
-            json.dump(responses_json, f, indent=2)
+            json.dump(output_data, f, indent=2)
         console.print(f"[green]✓ Saved responses to {output}[/green]")
     except OSError as e:
         console.print(f"[red]Error writing output file: {e}[/red]")

@@ -41,6 +41,23 @@ class RunMetadata(BaseModel):
     retrieval_mode: str
     top_k: int
     num_queries: int
+    # API response metadata (from RetrievalResponse)
+    api_dataset_version: str | None = Field(
+        None, description="Dataset version from API response"
+    )
+    api_config_hash: str | None = Field(
+        None, description="Configuration hash from API response"
+    )
+    api_schema_version: str | None = Field(
+        None, description="Schema version from API response"
+    )
+    api_request_id: str | None = Field(
+        None, description="Request ID from API response"
+    )
+    # Full metadata endpoint response (from /api/v1/metadata)
+    metadata_snapshot: dict | None = Field(
+        None, description="Full metadata endpoint response (dataset_spec, chunking_spec, available_indexes)"
+    )
 
 
 class TrecRun(BaseModel):
