@@ -53,7 +53,7 @@ wait_for_service() {
         sleep 1
         attempt=$((attempt + 1))
     done
-    echo " ❌ (timeout)"
+    echo " ❌ (timeout) Note PostgreSQL may take longer to start. Wait for the script to finish and check logs if needed."
     return 1
 }
 
