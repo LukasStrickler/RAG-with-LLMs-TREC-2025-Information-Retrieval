@@ -1,7 +1,7 @@
 import os
-import time
+
 from sshtunnel import SSHTunnelForwarder
-from typing import Dict, Tuple, Optional
+
 
 class SSHTunnelManager:
     """
@@ -23,10 +23,10 @@ class SSHTunnelManager:
         self.remote_qdrant_port = int(os.getenv("REMOTE_QDRANT_PORT", "6333"))
         self.remote_db_port = int(os.getenv("REMOTE_DB_PORT", "5432"))
         
-        self.server: Optional[SSHTunnelForwarder] = None
-        self.local_ports: Dict[str, int] = {}
+        self.server: SSHTunnelForwarder | None = None
+        self.local_ports: dict[str, int] = {}
 
-    def start(self) -> Dict[str, int]:
+    def start(self) -> dict[str, int]:
         """
         Starts the SSH tunnel and returns the local ports mapped to the remote services.
         """

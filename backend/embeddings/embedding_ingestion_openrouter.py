@@ -1,19 +1,19 @@
+import contextlib
+import logging
 import os
+import queue
+import threading
 import time
 import uuid
-import logging
-import requests
-import threading
-import queue
-from typing import List, Any, Set, Dict, Tuple
 
+import paramiko
+import requests
+from dotenv import load_dotenv
 from psycopg2 import pool
-from sshtunnel import SSHTunnelForwarder
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
+from sshtunnel import SSHTunnelForwarder
 from tqdm import tqdm
-import paramiko
-from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
@@ -102,20 +102,21 @@ class Database:
 
     def get_documents_by_ids(self, doc_ids):
         """Fetch documents by their IDs. Returns list of dicts with id, title, body, url."""
-        if not doc_ids: return []
+        if not doc_ids:
+            return []
         with self.get_conn().cursor() as cur:
             cur.execute("SELECT id, title, body, url FROM documents WHERE id = ANY(%s)", (doc_ids,))
             cols = [desc[0] for desc in cur.description]
-            return [dict(zip(cols, row)) for row in cur.fetchall()]
+            return [dict(zip(cols, row, strict=False)) for row in cur.fetchall()]
 
     def close(self):
         self.pool.closeall()
 
 
-def parse_qrels_file(filepath: str) -> Set[str]:
+def parse_qrels_file(filepath: str) -> set[str]:
     """Parse qrels file and extract unique document IDs."""
     doc_ids = set()
-    with open(filepath, 'r') as f:
+    with open(filepath) as f:
         for line in f:
             parts = line.strip().split()
             if len(parts) >= 3:
@@ -124,7 +125,7 @@ def parse_qrels_file(filepath: str) -> Set[str]:
     return doc_ids
 
 
-def get_collection_doc_ids(qdrant: QdrantClient, collection_name: str) -> Set[str]:
+def get_collection_doc_ids(qdrant: QdrantClient, collection_name: str) -> set[str]:
     """Fetch all doc_ids from a Qdrant collection."""
     print(f"🔎 Fetching existing documents from '{collection_name}'...")
     if not qdrant.collection_exists(collection_name):
@@ -154,7 +155,7 @@ def get_collection_doc_ids(qdrant: QdrantClient, collection_name: str) -> Set[st
     return existing_ids
 
 
-def get_points_by_doc_ids(qdrant: QdrantClient, collection_name: str, doc_ids: List[str]) -> Dict[str, models.PointStruct]:
+def get_points_by_doc_ids(qdrant: QdrantClient, collection_name: str, doc_ids: list[str]) -> dict[str, models.PointStruct]:
     """Fetch full points (with vectors) for specific doc_ids from a collection."""
     if not doc_ids:
         return {}
@@ -199,14 +200,12 @@ def ensure_collection_exists(qdrant: QdrantClient, collection_name: str, vector_
         )
     
     # Ensure doc_id index exists
-    try:
+    with contextlib.suppress(Exception):
         qdrant.create_payload_index(
             collection_name=collection_name,
             field_name="doc_id",
             field_schema=models.PayloadSchemaType.KEYWORD
         )
-    except Exception:
-        pass  # Index might already exist
 
 
 class PipelineStats:
@@ -271,7 +270,7 @@ class PipelineStats:
 # 3. CORE FUNCTIONS
 # ==========================================
 
-def get_openrouter_embeddings(texts: List[str], retries=10, backoff=1.0, max_backoff=30.0) -> List[List[float]]:
+def get_openrouter_embeddings(texts: list[str], retries=10, backoff=1.0, max_backoff=30.0) -> list[list[float]]:
     """Generates embeddings via OpenRouter API using batching with backoff and splitting."""
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
@@ -386,7 +385,7 @@ def get_openrouter_embeddings(texts: List[str], retries=10, backoff=1.0, max_bac
     return []
 
 
-def copy_points_to_collection(qdrant: QdrantClient, points: List[models.PointStruct], collection_name: str):
+def copy_points_to_collection(qdrant: QdrantClient, points: list[models.PointStruct], collection_name: str):
     """Copy points to a target collection in batches."""
     for i in range(0, len(points), QDRANT_UPSERT_BATCH_SIZE):
         batch = points[i:i + QDRANT_UPSERT_BATCH_SIZE]
@@ -464,7 +463,7 @@ def upsert_worker_dual(qdrant: QdrantClient, points_queue: queue.Queue, pbar: tq
     """Worker that upserts points to BOTH source and target collections."""
     last_time = time.time()
     
-    def do_upsert(collection_name: str, points_batch: List[models.PointStruct]):
+    def do_upsert(collection_name: str, points_batch: list[models.PointStruct]):
         """Upsert a single batch with retries."""
         max_retries = 5
         for attempt in range(max_retries):
@@ -476,7 +475,7 @@ def upsert_worker_dual(qdrant: QdrantClient, points_queue: queue.Queue, pbar: tq
                 error_str = str(e)
                 if "payload" in error_str.lower() and "larger than allowed" in error_str.lower():
                     if len(points_batch) <= 1:
-                        logger.error(f"Single point too large for Qdrant. Skipping.")
+                        logger.error("Single point too large for Qdrant. Skipping.")
                         return 0
                     logger.warning(f"Qdrant payload too large ({len(points_batch)} points). Splitting...")
                     mid = len(points_batch) // 2
@@ -571,7 +570,7 @@ def execute_pipeline():
         to_copy = remaining_qrels & source_doc_ids
         to_create = remaining_qrels - source_doc_ids
         
-        print(f"\n📊 Processing Summary:")
+        print("\n📊 Processing Summary:")
         print(f"   Already in '{TARGET_COLLECTION}': {len(already_in_target):,} (skipping)")
         print(f"   To copy from '{SOURCE_COLLECTION}': {len(to_copy):,}")
         print(f"   To create (new embeddings): {len(to_create):,}")
@@ -612,7 +611,7 @@ def execute_pipeline():
                 if points_map:
                     # Convert to PointStruct for upsert
                     points_to_copy = []
-                    for doc_id, record in points_map.items():
+                    for _doc_id, record in points_map.items():
                         point = models.PointStruct(
                             id=record.id,
                             vector=record.vector,
@@ -739,8 +738,8 @@ def main():
             ssh_password=SSH_PASSWORD,
             remote_bind_addresses=[(PG_REMOTE_IP, 5432), (QDRANT_REMOTE_IP, 6333)],
             local_bind_addresses=[('127.0.0.1', PG_LOCAL_PORT), ('127.0.0.1', QDRANT_HTTP_PORT)]
-        ) as tunnel:
-            print(f"🔌 Tunnel Active")
+        ):
+            print("🔌 Tunnel Active")
             execute_pipeline()
     else:
         # Direct connection (no SSH tunnel needed, e.g., running on the server itself)

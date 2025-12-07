@@ -35,13 +35,9 @@ async def retrieve(
     """
     Retrieve documents for given queries using specified retrieval mode.
 
-    TODO: REPLACE WITH REAL RETRIEVAL IMPLEMENTATION
+    Retrieve documents for given queries using specified retrieval mode.
+
     Currently returns mock data for development/testing.
-    When implementing:
-    - Connect to actual BM25 index for lexical mode
-    - Connect to vector store for semantic mode
-    - Implement fusion logic for hybrid mode
-    - Use real document retrieval and scoring
 
     Args:
         app_request: FastAPI request object to access app state
@@ -61,9 +57,7 @@ async def retrieve(
         f"top_k={request.queries[0].top_k if request.queries else 'N/A'}, "
         f"rerank={request.rerank}"
     )
-    print(
-        f"[DEBUG] Server: Received retrieval request: mode={request.mode}, num_queries={len(request.queries)}, rerank={request.rerank}"
-    )
+
 
     # Access real retrieval service
     retrieval_service = getattr(app_request.app.state, "retrieval_service", None)
@@ -80,9 +74,7 @@ async def retrieve(
     logger.info(
         f"Processing {len(request.queries)} queries in batches of {batch_size}..."
     )
-    print(
-        f"[DEBUG] Server: Starting to process {len(request.queries)} queries in batches of {batch_size}"
-    )
+
 
     results = []
     import time
@@ -95,9 +87,7 @@ async def retrieve(
         logger.info(
             f"Processing batch {batch_num}/{total_batches} ({len(batch)} queries)..."
         )
-        print(
-            f"[DEBUG] Server: Processing batch {batch_num}/{total_batches} ({len(batch)} queries)..."
-        )
+
         batch_start = time.time()
         tasks = [
             retrieval_service.generate_response(
@@ -117,22 +107,18 @@ async def retrieve(
         logger.info(
             f"Completed batch {batch_num}/{total_batches} ({len(batch_results)} results) in {batch_time:.2f}s (total: {elapsed:.2f}s)"
         )
-        print(
-            f"[DEBUG] Server: Completed batch {batch_num}/{total_batches} in {batch_time:.2f}s (total elapsed: {elapsed:.2f}s)"
-        )
+
 
     total_time = time.time() - start_time
     logger.info(
         f"Completed processing all {len(results)} query results in {total_time:.2f}s"
     )
-    print(f"[DEBUG] Server: Completed all {len(results)} queries in {total_time:.2f}s")
+
 
     # Apply reranking if requested
     if request.rerank:
-        print(f"[DEBUG] Server: Reranking requested, checking reranker availability...")
         reranker = getattr(app_request.app.state, "reranker", None)
         if reranker:
-            print(f"[DEBUG] Server: Reranker is available")
             total_queries = len(results)
             total_segments = sum(len(r.segments) for r in results)
             logger.info(
@@ -141,9 +127,7 @@ async def retrieve(
                 total_segments,
                 request.mode,
             )
-            print(
-                f"[DEBUG] Server: Starting reranking for {total_queries} queries ({total_segments} segments)"
-            )
+
             rerank_start = time.time()
             reranked_results = []
             # Log progress more frequently for large batches
@@ -160,9 +144,7 @@ async def retrieve(
                         query.query_id,
                         len(result.segments),
                     )
-                    print(
-                        f"[DEBUG] Server: Reranking query {i}/{total_queries}: {query.query_id} ({len(result.segments)} segments)"
-                    )
+
                 reranked_result = reranker.rerank_query_result(
                     query_result=result, query_text=query.query_text
                 )
@@ -188,16 +170,13 @@ async def retrieve(
                 rerank_time,
                 rerank_time / len(reranked_results) if reranked_results else 0,
             )
-            print(
-                f"[DEBUG] Server: Reranking completed: {len(reranked_results)} queries in {rerank_time:.2f}s"
-            )
+
             results = reranked_results
         else:
             logger.warning(
                 "Reranking requested but reranker service not available. "
                 "Returning original results."
             )
-            print("[DEBUG] Server: ⚠️  Reranking requested but reranker not available - returning original results")
             
             # If we fetched extra candidates but can't rerank, we must slice them back to requested top_k
             for result, query in zip(results, request.queries, strict=True):
@@ -205,15 +184,10 @@ async def retrieve(
                     result.segments = result.segments[:query.top_k]
 
     # Create response with API's own configuration
-    # TODO: Replace hardcoded values with database calls when
-    # implementing real retrieval
-    # - schema_version: fetch from DB/config table
-    # - dataset_version: fetch from active dataset configuration
-    # - config_hash: compute from actual config state or fetch from DB
     response = RetrievalResponse(
-        schema_version="1.0",  # TODO: Replace with DB call
-        dataset_version="trec_rag_2024",  # TODO: Replace with DB call
-        config_hash=(f"{request.mode}_config_v1"),  # TODO: Replace with DB call or hash
+        schema_version="1.0",
+        dataset_version="trec_rag_2024",
+        config_hash=(f"{request.mode}_config_v1"),
         request_id=str(uuid.uuid4()),
         results=results,
     )

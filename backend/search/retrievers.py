@@ -1,14 +1,16 @@
-import requests
-from typing import List, Dict, Any, Optional
-from qdrant_client import QdrantClient
 from dataclasses import dataclass
+from typing import Any
+
+import requests
+from qdrant_client import QdrantClient
+
 
 @dataclass
 class SearchResult:
     doc_id: str
     score: float
-    content: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+    content: str | None = None
+    metadata: dict[str, Any] | None = None
 
 class SolrRetriever:
     def __init__(self, base_url: str, core: str):
@@ -16,7 +18,7 @@ class SolrRetriever:
         self.core = core
         self.search_url = f"{base_url}/{core}/select"
 
-    def search(self, query: str, limit: int = 10) -> List[SearchResult]:
+    def search(self, query: str, limit: int = 10) -> list[SearchResult]:
         try:
             params = {
                 'q': query,
@@ -46,7 +48,7 @@ class QdrantRetriever:
         self.client = QdrantClient(host=host, port=port)
         self.collection_name = collection_name
 
-    def search(self, vector: List[float], limit: int = 10) -> List[SearchResult]:
+    def search(self, vector: list[float], limit: int = 10) -> list[SearchResult]:
         try:
             search_result = self.client.search(
                 collection_name=self.collection_name,
@@ -72,7 +74,7 @@ class HybridRetriever:
         self.solr = solr_retriever
         self.qdrant = qdrant_retriever
 
-    def search(self, query: str, vector: List[float], limit: int = 10, alpha: float = 0.5) -> List[SearchResult]:
+    def search(self, query: str, vector: list[float], limit: int = 10, alpha: float = 0.5) -> list[SearchResult]:
         """
         Simple hybrid search combining results.
         Alpha controls the weight: 1.0 = pure vector, 0.0 = pure lexical (if we were doing linear combination).
@@ -83,7 +85,7 @@ class HybridRetriever:
         
         return self.rrf(lexical_results, vector_results, limit=limit)
 
-    def rrf(self, list1: List[SearchResult], list2: List[SearchResult], limit: int = 10, k: int = 60) -> List[SearchResult]:
+    def rrf(self, list1: list[SearchResult], list2: list[SearchResult], limit: int = 10, k: int = 60) -> list[SearchResult]:
         """
         Reciprocal Rank Fusion.
         """

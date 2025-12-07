@@ -1,6 +1,6 @@
 """Solr indexing operations."""
+
 import requests
-from typing import Dict, List
 from tqdm import tqdm
 
 
@@ -14,7 +14,7 @@ class SolrIndexer:
         self.update_url = f"{base_url}/{core}/update/json/docs"
         self.commit_url = f"{base_url}/{core}/update"
     
-    def index(self, documents: List[Dict], batch_size: int = 500) -> int:
+    def index(self, documents: list[dict], batch_size: int = 500) -> int:
         """Index documents in batches."""
         if not documents:
             return 0

@@ -1,9 +1,10 @@
 import os
 import sys
-import time
-from ssh_utils import SSHTunnelManager
-from retrievers import SolrRetriever, QdrantRetriever, HybridRetriever
+
 from db import Database
+from retrievers import HybridRetriever, QdrantRetriever, SolrRetriever
+from ssh_utils import SSHTunnelManager
+
 
 # Mock vector for testing - in real usage this would come from an embedding model
 def get_mock_vector(dim=768):
@@ -35,9 +36,12 @@ def main():
                 'password': 'password'  # Default, might need env var
             }
             # Allow overriding DB creds via env
-            if os.getenv("DB_NAME"): db_config['database'] = os.getenv("DB_NAME")
-            if os.getenv("DB_USER"): db_config['user'] = os.getenv("DB_USER")
-            if os.getenv("DB_PASSWORD"): db_config['password'] = os.getenv("DB_PASSWORD")
+            if os.getenv("DB_NAME"):
+                db_config['database'] = os.getenv("DB_NAME")
+            if os.getenv("DB_USER"):
+                db_config['user'] = os.getenv("DB_USER")
+            if os.getenv("DB_PASSWORD"):
+                db_config['password'] = os.getenv("DB_PASSWORD")
             
             try:
                 db = Database(db_config)

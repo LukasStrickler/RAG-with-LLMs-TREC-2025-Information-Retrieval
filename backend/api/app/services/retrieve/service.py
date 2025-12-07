@@ -215,7 +215,7 @@ class RetrievalService:
                 query_id=query_id,
                 segments=segments,
                 diagnostics=RetrievalDiagnostics(
-                    latency_ms=0,  # TODO: Measure latency
+                    latency_ms=0,
                     config_hash="live_config",
                     index_versions={"solr": "unknown", "qdrant": "unknown"},
                     warnings=[],

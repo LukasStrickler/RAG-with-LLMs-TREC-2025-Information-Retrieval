@@ -1,11 +1,10 @@
 """Dataset-aware indexing pipeline: PostgreSQL to Solr."""
 import argparse
 import sys
-from typing import Optional
-from tqdm import tqdm
+
 from db import Database
 from solr import SolrIndexer
-
+from tqdm import tqdm
 
 # Configuration password is non critical since the db is never publicly reachable - hardcoded for simplicity
 # For a local setup change as needed
@@ -34,7 +33,7 @@ def list_datasets(db: Database):
         print(f"  Documents: {ds['doc_count']:,}")
 
 
-def index_dataset(db: Database, dataset_name: str, core: str, limit: Optional[int], batch_size: int, clear: bool):
+def index_dataset(db: Database, dataset_name: str, core: str, limit: int | None, batch_size: int, clear: bool):
     """Index a dataset into Solr."""
     
     # Get dataset
@@ -51,7 +50,7 @@ def index_dataset(db: Database, dataset_name: str, core: str, limit: Optional[in
         if current_count > 0:
             print(f"\nClearing {current_count:,} existing documents from '{core}' core...")
             if indexer.delete_all():
-                print(f"Cleared successfully")
+                print("Cleared successfully")
             else:
                 print("Failed to clear - continuing anyway...")
     
@@ -61,7 +60,7 @@ def index_dataset(db: Database, dataset_name: str, core: str, limit: Optional[in
     print(f"Total docs: {dataset['doc_count']:,} | Limit: {limit or 'None'} | Batch: {batch_size}")
     
     # Step 1: Get document IDs
-    print(f"\n[1/3] Fetching document IDs...")
+    print("\n[1/3] Fetching document IDs...")
     doc_ids = db.get_document_ids(dataset['id'], limit)
     print(f"Found {len(doc_ids):,} document IDs")
     
@@ -70,7 +69,7 @@ def index_dataset(db: Database, dataset_name: str, core: str, limit: Optional[in
         return
     
     # Step 2: Load documents
-    print(f"\n[2/3] Loading documents from database...")
+    print("\n[2/3] Loading documents from database...")
     documents = []
     with tqdm(total=len(doc_ids), desc="Loading", unit="docs") as pbar:
         for i in range(0, len(doc_ids), 1000):
@@ -83,7 +82,7 @@ def index_dataset(db: Database, dataset_name: str, core: str, limit: Optional[in
         print(f"Warning: {len(doc_ids) - len(documents):,} docs not found in documents table")
     
     # Step 3: Index to Solr
-    print(f"\n[3/3] Indexing to Solr...")
+    print("\n[3/3] Indexing to Solr...")
     indexed = indexer.index(documents, batch_size)
     total = indexer.count()
     

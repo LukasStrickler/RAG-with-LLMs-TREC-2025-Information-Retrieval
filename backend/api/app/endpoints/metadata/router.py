@@ -53,11 +53,8 @@ async def get_metadata(api_key: str = Depends(get_api_key)) -> dict[str, Any]:
     Raises:
         HTTPException: If authentication fails
 
-    TODO: Replace static responses with actual database queries
     """
 
-    # TODO: Fetch from metadata DB (e.g. metadata.dataset_specs filled by
-    # ingestion pipeline)
     # Mock dataset spec - in production this would come from database
     dataset_spec = DatasetSpec(
         name="MS MARCO v2.1",
@@ -67,15 +64,11 @@ async def get_metadata(api_key: str = Depends(get_api_key)) -> dict[str, Any]:
         source_uri="https://microsoft.github.io/msmarco/",
     )
 
-    # TODO: Load from metadata DB (e.g. metadata.chunking_specs persisted by
-    # ingestion jobs)
     # Mock chunking spec - in production this would come from database
     chunking_spec = ChunkingSpec(
         chunk_size=512, overlap=50, tokenizer="tiktoken", strategy="semantic_boundary"
     )
 
-    # TODO: Query index registry (e.g. metadata.index_targets maintained by
-    # index builders)
     # Mock available indexes - in production this would come from database
     available_indexes = [
         IndexTarget(

@@ -1,15 +1,6 @@
 """
 MOCK Retrieval Service - FOR DEVELOPMENT/TESTING ONLY
 
-TODO: Replace this entire file with real retrieval implementation:
-1. Create a RetrievalService class that connects to:
-   - BM25 index for lexical retrieval
-   - Vector database for semantic retrieval
-   - Hybrid fusion engine
-2. Implement actual document retrieval with real scores
-3. Remove all mock data generation logic
-4. Delete this file once real implementation is complete
-
 This mock service generates realistic responses for testing the evaluation pipeline.
 """
 
@@ -35,7 +26,6 @@ class MockRetrievalService:
     """
     MOCK Retrieval Service - FOR DEVELOPMENT/TESTING ONLY
 
-    TODO: Replace this entire class with real retrieval implementation.
     This class generates mock responses for testing the evaluation pipeline.
     """
 

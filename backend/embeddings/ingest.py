@@ -9,14 +9,14 @@ Enhancements:
  - Deterministic point IDs allow safe re-runs
 """
 
-import sys
-import os
-import uuid
 import argparse
-from typing import List, Dict, Any, Set
+import os
+import sys
+import uuid
 
 # Load environment variables
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # Add shared module to path if not installed
@@ -24,13 +24,12 @@ sys.path.append(
     os.path.abspath(os.path.join(os.path.dirname(__file__), "../../shared/src"))
 )
 
-import torch  # type: ignore
-from tqdm import tqdm
-from qdrant_client import QdrantClient
-from qdrant_client.http import models
-from sentence_transformers import SentenceTransformer
-
-from db import Database
+import torch  # type: ignore  # noqa: E402
+from db import Database  # noqa: E402
+from qdrant_client import QdrantClient  # noqa: E402
+from qdrant_client.http import models  # noqa: E402
+from sentence_transformers import SentenceTransformer  # noqa: E402
+from tqdm import tqdm  # noqa: E402
 
 # Configuration - Local Docker Setup
 DB_CONFIG = {
@@ -85,7 +84,7 @@ def setup_qdrant(
 
 
 def process_batch(
-    batch_docs: List[Dict],
+    batch_docs: list[dict],
     model: SentenceTransformer,
     qdrant: QdrantClient,
     dataset_name: str,
@@ -141,7 +140,7 @@ def process_batch(
 
     # Create points for upsert
     points = []
-    for doc, embedding in zip(docs_to_process, embeddings):
+    for doc, embedding in zip(docs_to_process, embeddings, strict=False):
         doc_id = doc["id"]
         point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(doc_id)))
         meta = {
