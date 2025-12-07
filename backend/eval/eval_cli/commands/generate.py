@@ -95,7 +95,7 @@ def run(
     # Convert to serializable format with API metadata
     try:
         responses_json = {qid: resp.model_dump() for qid, resp in responses.items()}
-        
+
         # Include API metadata in the output
         output_data = {
             "api_metadata": {

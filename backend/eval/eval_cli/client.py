@@ -74,9 +74,7 @@ class APIRetrievalClient:
             f"Making API request to {url} with {len(queries)} queries, "
             f"mode={mode}, timeout={self.timeout}s"
         )
-        logger.debug(
-            f"Client: Making API request to {url} with {len(queries)} queries"
-        )
+        logger.debug(f"Client: Making API request to {url} with {len(queries)} queries")
 
         # Make API call
         try:

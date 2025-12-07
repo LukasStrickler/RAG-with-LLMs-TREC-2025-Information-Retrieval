@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class CrossEncoderReranker:
     """
     Reranking service using cross-encoder models.
-    
+
     Uses pre-trained cross-encoder models to rerank retrieved documents
     based on query-document relevance scores.
     """
@@ -80,9 +80,7 @@ class CrossEncoderReranker:
             # Store original score in provenance
             original_score = segment.score
             segment.provenance.score_components["original_score"] = original_score
-            segment.provenance.score_components["cross_encoder_score"] = float(
-                ce_score
-            )
+            segment.provenance.score_components["cross_encoder_score"] = float(ce_score)
 
             # Update the main score to cross-encoder score
             segment.score = float(ce_score)
@@ -93,9 +91,7 @@ class CrossEncoderReranker:
         reranked_segments.sort(key=lambda s: s.score, reverse=True)
 
         # Update diagnostics to indicate reranking was applied
-        query_result.diagnostics.warnings.append(
-            f"Reranked using {self.model_name}"
-        )
+        query_result.diagnostics.warnings.append(f"Reranked using {self.model_name}")
 
         # Return new QueryResult with reranked segments
         return QueryResult(
@@ -131,9 +127,7 @@ class CrossEncoderReranker:
         for segment, ce_score in zip(segments, cross_encoder_scores, strict=True):
             # Store original score in provenance
             segment.provenance.score_components["original_score"] = segment.score
-            segment.provenance.score_components["cross_encoder_score"] = float(
-                ce_score
-            )
+            segment.provenance.score_components["cross_encoder_score"] = float(ce_score)
 
             # Update the main score
             segment.score = float(ce_score)

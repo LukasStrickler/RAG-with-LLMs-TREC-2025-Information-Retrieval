@@ -51,12 +51,11 @@ class RunMetadata(BaseModel):
     api_schema_version: str | None = Field(
         None, description="Schema version from API response"
     )
-    api_request_id: str | None = Field(
-        None, description="Request ID from API response"
-    )
+    api_request_id: str | None = Field(None, description="Request ID from API response")
     # Full metadata endpoint response (from /api/v1/metadata)
     metadata_snapshot: dict | None = Field(
-        None, description="Full metadata endpoint response (dataset_spec, chunking_spec, available_indexes)"
+        None,
+        description="Full metadata endpoint response (dataset_spec, chunking_spec, available_indexes)",
     )
 
 

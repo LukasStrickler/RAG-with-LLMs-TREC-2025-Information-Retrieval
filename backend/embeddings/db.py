@@ -36,9 +36,7 @@ class Database:
             None,
         )
 
-    def get_document_ids(
-        self, dataset_id: str, limit: int | None = None
-    ) -> list[str]:
+    def get_document_ids(self, dataset_id: str, limit: int | None = None) -> list[str]:
         """Fetch document IDs for a dataset."""
         with self.conn.cursor() as cur:
             query = "SELECT document_id FROM document_in_dataset WHERE dataset_id = %s ORDER BY document_id"

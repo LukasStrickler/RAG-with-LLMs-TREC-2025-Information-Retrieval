@@ -50,7 +50,11 @@ def build(
         raise typer.Exit(1)
 
     # Handle both old format (dict of responses) and new format (with api_metadata wrapper)
-    if isinstance(file_data, dict) and "responses" in file_data and "api_metadata" in file_data:
+    if (
+        isinstance(file_data, dict)
+        and "responses" in file_data
+        and "api_metadata" in file_data
+    ):
         # New format with metadata wrapper
         responses_data = file_data["responses"]
         api_metadata = file_data.get("api_metadata", {})

@@ -62,9 +62,7 @@ def limit_topic_set(topic_set: TopicSet, limit: int | None) -> TopicSet:
 
 def filter_qrels_for_queries(qrels: Qrels, query_ids: set[str]) -> Qrels:
     """Filter qrels to only include entries for specified query IDs."""
-    filtered_entries = [
-        entry for entry in qrels.entries if entry.query_id in query_ids
-    ]
+    filtered_entries = [entry for entry in qrels.entries if entry.query_id in query_ids]
     return Qrels(entries=filtered_entries)
 
 
@@ -157,14 +155,17 @@ def run(
             if not qrels_rel_path:
                 available = list(config.paths.qrels.keys())
                 raise RuntimeError(
-                    f"No qrels configured for topics='{topics}'. " f"Available: {available}"
+                    f"No qrels configured for topics='{topics}'. "
+                    f"Available: {available}"
                 )
             qrels_path = config.get_data_path(qrels_rel_path)
             qrels, qrels_stats = load_qrels(qrels_path)
 
             # Filter topics to only include queries that have qrels
             queries_with_qrels = {entry.query_id for entry in qrels.entries}
-            filtered_count = len([t for t in topic_set.topics if t.query_id in queries_with_qrels])
+            filtered_count = len(
+                [t for t in topic_set.topics if t.query_id in queries_with_qrels]
+            )
             if filtered_count < original_count:
                 topic_set = filter_topics_by_qrels(topic_set, qrels)
                 console.print(
@@ -183,7 +184,9 @@ def run(
                     console.print(
                         f"[yellow]⚠️  Limiting to first {limit} queries (from {filtered_count} with qrels)[/yellow]"
                     )
-            progress.update(task1, description=f"Loaded {len(topic_set)} topics (with qrels)")
+            progress.update(
+                task1, description=f"Loaded {len(topic_set)} topics (with qrels)"
+            )
         except FileNotFoundError as e:
             console.print(f"[red]Error: Topic file not found: {e}[/red]")
             raise typer.Exit(1)
@@ -195,7 +198,9 @@ def run(
         task2 = progress.add_task("Generating responses via API...", total=None)
         try:
             client = APIRetrievalClient(config)
-            batch_response = client.retrieve_batch_sync(topic_set, mode, top_k, rerank=rerank)
+            batch_response = client.retrieve_batch_sync(
+                topic_set, mode, top_k, rerank=rerank
+            )
             responses = batch_response.results
             progress.update(task2, description=f"Generated {len(responses)} responses")
         except RuntimeError as e:
@@ -218,12 +223,12 @@ def run(
         # Step 3: Build TREC run
         task3 = progress.add_task("Building TREC run...", total=None)
         run_id = experiment_name  # Use experiment name as run_id
-        
+
         # Prepare metadata snapshot if available
         metadata_snapshot = None
         if metadata_response:
             metadata_snapshot = metadata_response.model_dump()
-        
+
         metadata = RunMetadata(
             run_id=run_id,
             config_snapshot=config.model_dump(),
@@ -242,7 +247,7 @@ def run(
             trec_run = build_trec_run(responses, run_id, metadata)
             run_file = output_dir / f"{run_id}.tsv"
             write_trec_run(trec_run, run_file)
-            
+
             # Save dataset info file for easy reference
             dataset_info_file = output_dir / f"{run_id}_dataset_info.json"
             dataset_info = {
@@ -254,10 +259,10 @@ def run(
             if metadata_snapshot:
                 dataset_info["dataset_spec"] = metadata_snapshot.get("dataset_spec")
                 dataset_info["chunking_spec"] = metadata_snapshot.get("chunking_spec")
-            
+
             with open(dataset_info_file, "w", encoding="utf-8") as f:
                 json.dump(dataset_info, f, indent=2, default=str)
-            
+
             progress.update(task3, description=f"Built TREC run: {run_file}")
         except Exception as e:
             console.print(f"[red]Error building/writing TREC run: {e}[/red]")
@@ -271,7 +276,7 @@ def run(
             original_qrels_count = len(qrels.entries)
             qrels = filter_qrels_for_queries(qrels, limited_query_ids)
             filtered_qrels_count = len(qrels.entries)
-            
+
             # Write filtered qrels to temporary file for trec_eval
             qrels_path_to_use = qrels_path
             if original_qrels_count != filtered_qrels_count or limit is not None:
@@ -379,7 +384,9 @@ def benchmark(
 
         # Filter topics to only include queries that have qrels
         queries_with_qrels = {entry.query_id for entry in qrels.entries}
-        filtered_count = len([t for t in topic_set.topics if t.query_id in queries_with_qrels])
+        filtered_count = len(
+            [t for t in topic_set.topics if t.query_id in queries_with_qrels]
+        )
         if filtered_count < original_count:
             topic_set = filter_topics_by_qrels(topic_set, qrels)
             console.print(
@@ -399,9 +406,11 @@ def benchmark(
                     f"[yellow]⚠️  Limiting to first {limit} queries (from {filtered_count} with qrels)[/yellow]"
                 )
         client = APIRetrievalClient(config)
-        batch_response = client.retrieve_batch_sync(topic_set, mode="hybrid", top_k=100, rerank=rerank)
+        batch_response = client.retrieve_batch_sync(
+            topic_set, mode="hybrid", top_k=100, rerank=rerank
+        )
         responses = batch_response.results
-        
+
         # Fetch metadata from API (non-blocking, graceful failure)
         metadata_response = None
         try:
@@ -422,12 +431,12 @@ def benchmark(
         raise typer.Exit(1)
 
     run_id = f"benchmark_{topics}"
-    
+
     # Prepare metadata snapshot if available
     metadata_snapshot = None
     if metadata_response:
         metadata_snapshot = metadata_response.model_dump()
-    
+
     metadata = RunMetadata(
         run_id=run_id,
         config_snapshot=config.model_dump(),
@@ -446,7 +455,7 @@ def benchmark(
         trec_run = build_trec_run(responses, run_id, metadata)
         run_file = run_dir / f"{run_id}.tsv"
         write_trec_run(trec_run, run_file)
-        
+
         # Save dataset info file for easy reference
         dataset_info_file = run_dir / f"{run_id}_dataset_info.json"
         dataset_info = {
@@ -458,7 +467,7 @@ def benchmark(
         if metadata_snapshot:
             dataset_info["dataset_spec"] = metadata_snapshot.get("dataset_spec")
             dataset_info["chunking_spec"] = metadata_snapshot.get("chunking_spec")
-        
+
         with open(dataset_info_file, "w", encoding="utf-8") as f:
             json.dump(dataset_info, f, indent=2, default=str)
     except Exception as e:
@@ -471,7 +480,7 @@ def benchmark(
         original_qrels_count = len(qrels.entries)
         qrels = filter_qrels_for_queries(qrels, limited_query_ids)
         filtered_qrels_count = len(qrels.entries)
-        
+
         # Write filtered qrels to temporary file for trec_eval
         qrels_path_to_use = qrels_path
         if original_qrels_count != filtered_qrels_count or limit is not None:
@@ -601,7 +610,9 @@ def run_all_modes(
 
         # Filter topics to only include queries that have qrels
         queries_with_qrels = {entry.query_id for entry in qrels.entries}
-        filtered_count = len([t for t in topic_set.topics if t.query_id in queries_with_qrels])
+        filtered_count = len(
+            [t for t in topic_set.topics if t.query_id in queries_with_qrels]
+        )
         if filtered_count < original_count:
             topic_set = filter_topics_by_qrels(topic_set, qrels)
             console.print(
@@ -637,7 +648,7 @@ def run_all_modes(
     except Exception as e:
         logger = logging.getLogger(__name__)
         logger.warning(f"Failed to fetch metadata: {e}")
-    
+
     # Prepare metadata snapshot if available
     metadata_snapshot = None
     if metadata_response:
@@ -657,7 +668,9 @@ def run_all_modes(
 
         # Use the already-loaded (and potentially limited) topic_set
         try:
-            batch_response = client.retrieve_batch_sync(topic_set, mode, top_k, rerank=rerank)
+            batch_response = client.retrieve_batch_sync(
+                topic_set, mode, top_k, rerank=rerank
+            )
             responses = batch_response.results
         except FileNotFoundError as e:
             console.print(f"[red]Error: Topic file not found: {e}[/red]")
@@ -690,7 +703,7 @@ def run_all_modes(
             run_file = mode_output_dir / f"{run_id}.tsv"
             mode_output_dir.mkdir(parents=True, exist_ok=True)
             write_trec_run(trec_run, run_file)
-            
+
             # Save dataset info file for easy reference
             dataset_info_file = mode_output_dir / f"{run_id}_dataset_info.json"
             dataset_info = {
@@ -702,7 +715,7 @@ def run_all_modes(
             if metadata_snapshot:
                 dataset_info["dataset_spec"] = metadata_snapshot.get("dataset_spec")
                 dataset_info["chunking_spec"] = metadata_snapshot.get("chunking_spec")
-            
+
             with open(dataset_info_file, "w", encoding="utf-8") as f:
                 json.dump(dataset_info, f, indent=2, default=str)
         except Exception as e:
@@ -716,7 +729,7 @@ def run_all_modes(
             original_qrels_count = len(qrels.entries)
             qrels = filter_qrels_for_queries(qrels, limited_query_ids)
             filtered_qrels_count = len(qrels.entries)
-            
+
             # Write filtered qrels to temporary file for trec_eval
             qrels_path_to_use = qrels_path
             if original_qrels_count != filtered_qrels_count or limit is not None:
