@@ -58,3 +58,11 @@ data/
 
 # Evaluation data assets
 .data/
+
+# Generated storage files (extracted from split backups)
+images/solr_backup_optimized.tar.gz
+images/qdrant_backup.tar.gz
+images/postgres_backup.dump.gz
+images/postgres_backup.dump
+images/solr_data_backup/
+images/qdrant_data_backup/
