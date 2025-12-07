@@ -25,8 +25,8 @@ All protected endpoints expect an `X-API-Key` header. To configure it locally:
 | Method | Path | Description | Notes |
 | --- | --- | --- | --- |
 | `GET` | `/health` | Heartbeat and version info | Public endpoint (no auth required). |
-| `GET` | `/api/v1/metadata` | Returns dataset, chunking, and index metadata | Served from placeholders until the metadata DB is in place. |
-| `POST` | `/api/v1/retrieve` | Retrieval contract returning ranked segments | Connected to Solr (lexical) and Qdrant (vector) via SSH tunnel. |
+| `GET` | `/api/v1/metadata` | Returns dataset, chunking, and index metadata | Used by eval CLI for reproducibility. Served from placeholders until the metadata DB is in place. |
+| `POST` | `/api/v1/retrieve` | Retrieval contract returning ranked segments | Connected to Solr (lexical) and Qdrant (vector) via SSH tunnel. Response includes metadata (dataset_version, config_hash, schema_version) captured by eval CLI. |
 
 ## Hybrid Retrieval & SSH Tunnel
 

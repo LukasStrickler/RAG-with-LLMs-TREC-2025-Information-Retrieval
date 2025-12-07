@@ -38,7 +38,7 @@ def build(
     # Load responses
     try:
         with open(responses, encoding="utf-8") as f:
-            responses_data = json.load(f)
+            file_data = json.load(f)
     except FileNotFoundError as e:
         console.print(f"[red]Error: Responses file not found: {e}[/red]")
         raise typer.Exit(1)
@@ -48,6 +48,16 @@ def build(
     except Exception as e:
         console.print(f"[red]Error reading responses file: {e}[/red]")
         raise typer.Exit(1)
+
+    # Handle both old format (dict of responses) and new format (with api_metadata wrapper)
+    if isinstance(file_data, dict) and "responses" in file_data and "api_metadata" in file_data:
+        # New format with metadata wrapper
+        responses_data = file_data["responses"]
+        api_metadata = file_data.get("api_metadata", {})
+    else:
+        # Old format - just responses dict
+        responses_data = file_data
+        api_metadata = {}
 
     # Convert to QueryResult objects
     try:
@@ -71,14 +81,18 @@ def build(
     if run_id is None:
         run_id = f"mock_run_{responses.stem}"
 
-    # Create metadata
+    # Create metadata (include API metadata if available)
     metadata = RunMetadata(
         run_id=run_id,
         config_snapshot=config.model_dump(),
         topic_source=str(responses),
-        retrieval_mode="mock",
+        retrieval_mode="file",  # Built from file, not from API
         top_k=100,
         num_queries=len(retrieval_responses),
+        api_dataset_version=api_metadata.get("dataset_version"),
+        api_config_hash=api_metadata.get("config_hash"),
+        api_schema_version=api_metadata.get("schema_version"),
+        api_request_id=api_metadata.get("request_id"),
     )
 
     # Build TREC run
