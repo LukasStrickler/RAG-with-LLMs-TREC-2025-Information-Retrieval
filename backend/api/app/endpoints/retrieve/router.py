@@ -180,9 +180,13 @@ async def retrieve(
                     result.segments = result.segments[: query.top_k]
 
     # Create response with API's own configuration
+    # dataset_version represents the corpus/index being searched (MS MARCO v2.1),
+    # not the topics file used by the eval CLI (rag23, rag24, etc.)
+    dataset_version = "msmarco_v2.1"  # Based on DatasetSpec.name from metadata endpoint
+
     response = RetrievalResponse(
         schema_version="1.0",
-        dataset_version="trec_rag_2024",
+        dataset_version=dataset_version,
         config_hash=(f"{request.mode}_config_v1"),
         request_id=str(uuid.uuid4()),
         results=results,
