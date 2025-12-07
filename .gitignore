@@ -55,6 +55,8 @@ Thumbs.db
 
 # Data
 data/
+# Exception: shared package data module (not data files)
+!shared/src/shared/data/
 
 # Evaluation data assets
 .data/

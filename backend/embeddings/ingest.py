@@ -80,9 +80,6 @@ def setup_qdrant(
         print(f"Collection '{collection_name}' ready (existing).")
 
 
-
-
-
 def process_batch(
     batch_docs: list[dict],
     model: SentenceTransformer,
@@ -101,7 +98,7 @@ def process_batch(
     # Prepare texts and check for existing documents
     texts_to_embed = []
     docs_to_process = []
-    
+
     for doc in batch_docs:
         doc_id = doc["id"]
         text = doc.get("body", "") or doc.get(
@@ -112,7 +109,7 @@ def process_batch(
 
         # Generate deterministic point ID based on doc_id
         point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(doc_id)))
-        
+
         # Check if document already exists (if resume mode)
         if resume:
             try:
@@ -126,7 +123,7 @@ def process_batch(
             except Exception:
                 # If collection doesn't exist or other error, proceed with embedding
                 pass
-        
+
         texts_to_embed.append(text)
         docs_to_process.append(doc)
 

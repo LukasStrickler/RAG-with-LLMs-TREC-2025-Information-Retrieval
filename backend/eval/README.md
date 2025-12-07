@@ -418,36 +418,88 @@ Each experiment generates KPI reports showing:
 
 ## Output Structure
 
-Experiments are organized with timestamps for easy comparison:
+Experiments are organized with timestamps for easy comparison. Each experiment generates:
+
+1. **TREC Run Files** (`.tsv`) - Official TREC format run files for submission
+2. **Dataset Info Files** (`_dataset_info.json`) - Dataset and configuration metadata from API
+3. **Report Files** (`_report.json`) - Evaluation metrics and full run metadata
 
 ```text
 artifacts/
 └── experiments/
     └── baseline_v1_rag23_20251024_183800/
         ├── lexical/
-        │   ├── baseline_v1_rag23_20251024_183800_lexical.tsv
-        │   └── baseline_v1_rag23_20251024_183800_lexical_report.json
+        │   ├── baseline_v1_rag23_20251024_183800_lexical.tsv          # TREC run file
+        │   ├── baseline_v1_rag23_20251024_183800_lexical_dataset_info.json  # API dataset info
+        │   └── baseline_v1_rag23_20251024_183800_lexical_report.json # Full report
         ├── vector/
         │   ├── baseline_v1_rag23_20251024_183800_vector.tsv
+        │   ├── baseline_v1_rag23_20251024_183800_vector_dataset_info.json
         │   └── baseline_v1_rag23_20251024_183800_vector_report.json
         └── hybrid/
             ├── baseline_v1_rag23_20251024_183800_hybrid.tsv
+            ├── baseline_v1_rag23_20251024_183800_hybrid_dataset_info.json
             └── baseline_v1_rag23_20251024_183800_hybrid_report.json
 ```
+
+### TREC Run Files
+
+Official TREC format files (6 columns: `query_id`, `Q0`, `doc_id`, `rank`, `score`, `run_id`) ready for submission to TREC evaluation tools.
+
+### Dataset Info Files
+
+Contains dataset and configuration information retrieved from the API endpoints:
+
+```json
+{
+  "api_dataset_version": "trec_rag_2024",
+  "api_config_hash": "lexical_config_v1",
+  "api_schema_version": "1.0",
+  "api_request_id": "uuid-here",
+  "dataset_spec": {
+    "name": "MS MARCO v2.1",
+    "version": "dev",
+    "split": "dev",
+    "release_date": "2024-01-01",
+    "source_uri": "https://microsoft.github.io/msmarco/"
+  },
+  "chunking_spec": {
+    "chunk_size": 512,
+    "overlap": 50,
+    "tokenizer": "tiktoken",
+    "strategy": "semantic_boundary"
+  }
+}
+```
+
+This information is automatically captured from:
+- `/api/v1/retrieve` response metadata (dataset_version, config_hash, schema_version, request_id)
+- `/api/v1/metadata` endpoint (dataset_spec, chunking_spec, available_indexes)
+
+### Report Files
+
+Comprehensive evaluation reports including:
+- **evaluation_report**: KPI metrics and status
+- **run_metadata**: Complete run configuration and API metadata for reproducibility
 
 ## Integration with API
 
 **Note:** The API currently returns mock responses for development and testing. Real retrieval services will be integrated in future updates.
 
-The CLI communicates with the retrieval API server:
+The CLI communicates with the retrieval API server and automatically captures metadata for reproducibility:
 
 ```text
 ┌─────────────┐         ┌──────────────┐
 │  Eval CLI   │────────▶│  API Server  │
 │             │ Request │              │
 │             │◀────────│  Response    │
+│             │         │  + Metadata   │
+│             │────────▶│  /metadata   │
+│             │◀────────│  Dataset Info│
 └─────────────┘         └──────────────┘
 ```
+
+### Retrieval Endpoint (`/api/v1/retrieve`)
 
 **Request Format:**
 ```json
@@ -459,7 +511,8 @@ The CLI communicates with the retrieval API server:
       "query_text": "What is machine learning?",
       "top_k": 100
     }
-  ]
+  ],
+  "rerank": true
 }
 ```
 
@@ -467,7 +520,7 @@ The CLI communicates with the retrieval API server:
 ```json
 {
   "schema_version": "1.0",
-  "dataset_version": "trec_rag_2023",
+  "dataset_version": "trec_rag_2024",
   "config_hash": "hybrid_config_v1",
   "request_id": "uuid-here",
   "results": [
@@ -492,7 +545,40 @@ The CLI communicates with the retrieval API server:
 }
 ```
 
-The endpoint is `/api/v1/retrieve` and requires authentication via `X-API-Key` header.
+The CLI automatically extracts and saves:
+- `dataset_version` - Dataset version used by the API
+- `config_hash` - Configuration identifier
+- `schema_version` - API schema version
+- `request_id` - Unique request identifier
+
+### Metadata Endpoint (`/api/v1/metadata`)
+
+The CLI optionally calls `/api/v1/metadata` to retrieve comprehensive configuration information:
+
+**Response Format:**
+```json
+{
+  "dataset_spec": {
+    "name": "MS MARCO v2.1",
+    "version": "dev",
+    "split": "dev",
+    "release_date": "2024-01-01",
+    "source_uri": "https://microsoft.github.io/msmarco/"
+  },
+  "chunking_spec": {
+    "chunk_size": 512,
+    "overlap": 50,
+    "tokenizer": "tiktoken",
+    "strategy": "semantic_boundary"
+  },
+  "available_indexes": [...],
+  "schema_version": "1.0.0"
+}
+```
+
+**Note:** If the metadata endpoint is unavailable, the CLI gracefully continues without metadata (logs a warning). All API metadata is saved in the `_dataset_info.json` and `_report.json` files for full reproducibility.
+
+Both endpoints require authentication via `X-API-Key` header.
 
 ## Error Handling
 

@@ -141,6 +141,8 @@ Key model categories:
 - **Status:** Fully implemented and production-ready.
 - **Capabilities:** Issues batch `RetrievalRequest`s, compares modes, computes all TREC metrics (nDCG, MAP, MRR, Recall, HitRate).
 - **Integration:** Works with `trec_eval` binary and provides comprehensive KPI analysis.
+- **Metadata Capture:** Automatically captures dataset version, config hash, and metadata from API responses for full reproducibility.
+- **Output Files:** Generates TREC run files (`.tsv`), dataset info files (`_dataset_info.json`), and comprehensive reports (`_report.json`).
 - **See:** [`backend/eval/README.md`](backend/eval/README.md) for complete documentation.
 
 ### 9. Chat UI (RAG Assistant) 📋

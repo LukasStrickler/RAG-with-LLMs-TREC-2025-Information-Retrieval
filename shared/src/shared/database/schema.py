@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 # --- 1. DATASET MODEL ---
 class Dataset(BaseModel):
-    id: UUID
+    id: Optional[UUID] = None
     name: str
     version: Optional[str] = None
     split: Optional[str] = None
@@ -15,8 +15,8 @@ class Dataset(BaseModel):
 
 # --- 2. CHUNKING SPEC MODEL ---
 class ChunkingSpec(BaseModel):
-    id: UUID
-    dataset_id: UUID
+    id: Optional[UUID] = None
+    dataset_id: Optional[UUID] = None
     chunk_size: Optional[int] = None
     overlap: Optional[int] = None
     tokenizer: Optional[str] = None
@@ -26,8 +26,8 @@ class ChunkingSpec(BaseModel):
 
 # --- 3. INDEX TARGET MODEL ---
 class IndexTarget(BaseModel):
-    id: UUID
-    dataset_id: UUID
+    id: Optional[UUID] = None
+    dataset_id: Optional[UUID] = None
     kind: Optional[str] = None
     uri: Optional[str] = None
     snapshot_id: Optional[str] = None

@@ -3,6 +3,7 @@ FastAPI application main module.
 """
 
 import logging
+import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -21,6 +22,19 @@ from app.services.rerank.rerank import CrossEncoderReranker
 from app.services.retrieve.service import RetrievalService
 
 # Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    stream=sys.stdout,
+    force=True,  # Override any existing configuration
+)
+
+# Set specific loggers to appropriate levels
+logging.getLogger("uvicorn").setLevel(logging.INFO)
+logging.getLogger("uvicorn.access").setLevel(logging.INFO)
+logging.getLogger("httpx").setLevel(logging.WARNING)  # Reduce noise from HTTP client
+
 logger = logging.getLogger(__name__)
 
 

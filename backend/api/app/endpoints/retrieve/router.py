@@ -58,7 +58,6 @@ async def retrieve(
         f"rerank={request.rerank}"
     )
 
-
     # Access real retrieval service
     retrieval_service = getattr(app_request.app.state, "retrieval_service", None)
     if not retrieval_service:
@@ -74,7 +73,6 @@ async def retrieve(
     logger.info(
         f"Processing {len(request.queries)} queries in batches of {batch_size}..."
     )
-
 
     results = []
     import time
@@ -108,12 +106,10 @@ async def retrieve(
             f"Completed batch {batch_num}/{total_batches} ({len(batch_results)} results) in {batch_time:.2f}s (total: {elapsed:.2f}s)"
         )
 
-
     total_time = time.time() - start_time
     logger.info(
         f"Completed processing all {len(results)} query results in {total_time:.2f}s"
     )
-
 
     # Apply reranking if requested
     if request.rerank:
@@ -148,11 +144,11 @@ async def retrieve(
                 reranked_result = reranker.rerank_query_result(
                     query_result=result, query_text=query.query_text
                 )
-                
+
                 # Slice back to original requested top_k
                 if len(reranked_result.segments) > query.top_k:
-                     reranked_result.segments = reranked_result.segments[:query.top_k]
-                     
+                    reranked_result.segments = reranked_result.segments[: query.top_k]
+
                 query_time = time.time() - query_start
                 if i % log_interval == 0 or i == 1 or i == total_queries:
                     logger.info(
@@ -177,11 +173,11 @@ async def retrieve(
                 "Reranking requested but reranker service not available. "
                 "Returning original results."
             )
-            
+
             # If we fetched extra candidates but can't rerank, we must slice them back to requested top_k
             for result, query in zip(results, request.queries, strict=True):
                 if len(result.segments) > query.top_k:
-                    result.segments = result.segments[:query.top_k]
+                    result.segments = result.segments[: query.top_k]
 
     # Create response with API's own configuration
     response = RetrievalResponse(

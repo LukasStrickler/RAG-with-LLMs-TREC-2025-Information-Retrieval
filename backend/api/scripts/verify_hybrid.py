@@ -6,7 +6,7 @@ from pathlib import Path
 # Add backend/api to path so we can import app
 sys.path.append(str(Path(__file__).parent.parent))
 
-from app.services.retrieve.service import RetrievalService
+from app.services.retrieve.service import RetrievalService  # noqa: E402
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
