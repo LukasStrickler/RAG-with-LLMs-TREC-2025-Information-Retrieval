@@ -2,6 +2,7 @@
 
 ## Quick Start
 
+### macOS/Linux
 ```bash
 # 1. Install Git LFS and pull large files
 brew install git-lfs && git lfs install && git lfs pull
@@ -24,6 +25,61 @@ npm run backend:dev
 
 # 6. Start frontend (Terminal 2)
 cd frontend && npm run dev
+```
+
+### Windows (Git Bash or WSL)
+```bash
+# 1. Install Git LFS and pull large files
+# Download and install from: https://git-lfs.github.com/
+# Or via winget in PowerShell: winget install -e --id GitHub.GitLFS
+git lfs install
+git lfs pull
+
+# 2. Initialize storage and start Docker services (~5 min)
+./scripts/setup.sh
+
+# 3. Install dependencies
+poetry install
+cd backend/api && poetry install && cd ../..
+cd backend/eval && poetry install && cd ../..
+cd frontend && npm install && cd ..
+
+# 4. Setup environment files
+cp backend/api/.env.example backend/api/.env
+cp backend/eval/.env.example backend/eval/.env
+
+# 5. Start backend (Terminal 1)
+npm run backend:dev
+
+# 6. Start frontend (Terminal 2)
+cd frontend && npm run dev
+```
+
+### Windows (PowerShell)
+```powershell
+# 1. Install Git LFS and pull large files
+winget install -e --id GitHub.GitLFS
+git lfs install
+git lfs pull
+
+# 2. Initialize storage and start Docker services (~5 min)
+bash ./scripts/setup.sh
+
+# 3. Install dependencies
+poetry install
+cd backend/api; poetry install; cd ../..
+cd backend/eval; poetry install; cd ../..
+cd frontend; npm install; cd ..
+
+# 4. Setup environment files
+Copy-Item backend/api/.env.example backend/api/.env
+Copy-Item backend/eval/.env.example backend/eval/.env
+
+# 5. Start backend (Terminal 1)
+npm run backend:dev
+
+# 6. Start frontend (Terminal 2)
+cd frontend; npm run dev
 ```
 
 ## What's Included
