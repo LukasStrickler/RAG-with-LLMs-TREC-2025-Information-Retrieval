@@ -1,4 +1,14 @@
-# this is the docker compose file that was run on our coolify server to host solr with multiple default cores
+# Docker Compose for RAG System with TREC 2025 Information Retrieval
+# 
+# IMPORTANT: Before first run, initialize storage from backups:
+#   ./scripts/setup.sh          (recommended - runs init + starts services)
+#   OR
+#   ./scripts/init-storage.sh   (just initializes storage)
+#
+# This will combine split backup files and extract to:
+#   - ./images/solr_data_backup (5.2GB - 1.6M MS MARCO docs, BM25 indexed)
+#   - ./images/qdrant_data_backup (6.3GB - vector embeddings)
+#
 services:
   solr:
     image: solr:latest
@@ -9,7 +19,7 @@ services:
     environment:
       - SOLR_JAVA_MEM=-Xms512m -Xmx512m
     volumes:
-      - solr_data:/var/solr
+      - ./images/solr_data_backup:/var/solr
     # We override the default command to create multiple cores at startup to prepare the environment to host multiple datasets
     command:
       - bash
@@ -28,7 +38,7 @@ services:
       - "6333:6333"
       - "6334:6334"
     volumes:
-      - qdrant_storage:/qdrant/storage
+      - ./images/qdrant_data_backup:/qdrant/storage
   postgres:
     image: postgres:latest
     container_name: postgres
@@ -49,9 +59,7 @@ services:
       retries: 5
 
 volumes:
-  solr_data:
-    name: solr_data
-  qdrant_storage:
-    name: qdrant_storage
+  # Solr and Qdrant use local directory mounts (see volumes above)
+  # PostgreSQL uses a named volume for persistence
   pgdata:
     name: pgdata
