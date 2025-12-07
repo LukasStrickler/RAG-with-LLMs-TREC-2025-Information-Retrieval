@@ -81,6 +81,34 @@ if [ $FORCE_EXTRACT -eq 1 ] && [ -d "qdrant_data_backup" ]; then
 fi
 combine_and_extract "qdrant_backup" "qdrant_data_backup"
 
+# Process PostgreSQL backup
+echo ""
+echo "📦 Processing postgres_backup..."
+
+# Check if split files exist
+if ! ls postgres_backup.dump.gz.part-* 1> /dev/null 2>&1; then
+    echo "⚠️  Warning: No PostgreSQL backup split files found"
+    echo "  → PostgreSQL will start empty"
+else
+    # Combine split files if dump doesn't exist or is older than split files
+    if [ ! -f "postgres_backup.dump.gz" ] || [ "$(ls -t postgres_backup.dump.gz.part-* | head -1)" -nt "postgres_backup.dump.gz" ]; then
+        echo "  → Combining split files..."
+        cat postgres_backup.dump.gz.part-* > postgres_backup.dump.gz
+        echo "  ✓ Combined into postgres_backup.dump.gz"
+    else
+        echo "  ✓ Using existing postgres_backup.dump.gz (up to date)"
+    fi
+    
+    # Decompress if needed
+    if [ ! -f "postgres_backup.dump" ] || [ "postgres_backup.dump.gz" -nt "postgres_backup.dump" ]; then
+        echo "  → Decompressing backup..."
+        gunzip -c postgres_backup.dump.gz > postgres_backup.dump
+        echo "  ✓ Decompressed successfully"
+    else
+        echo "  ✓ Using existing postgres_backup.dump"
+    fi
+fi
+
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "✅ Storage initialization complete!"
@@ -88,5 +116,6 @@ echo ""
 echo "Directory sizes:"
 du -sh solr_data_backup 2>/dev/null || echo "  solr_data_backup: not found"
 du -sh qdrant_data_backup 2>/dev/null || echo "  qdrant_data_backup: not found"
+du -sh postgres_backup.dump 2>/dev/null || echo "  postgres_backup.dump: not found"
 echo ""
 echo "You can now run: docker-compose up -d"

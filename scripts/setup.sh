@@ -61,6 +61,32 @@ wait_for_service "PostgreSQL" "localhost:5433" || true
 wait_for_service "Solr" "http://localhost:8983/solr/" || true
 wait_for_service "Qdrant" "http://localhost:6333/dashboard" || true
 
+# Step 4: Restore PostgreSQL backup if available
+echo ""
+echo "Step 4/4: Restoring PostgreSQL backup..."
+
+POSTGRES_BACKUP="$PROJECT_ROOT/images/postgres_backup.dump"
+if [ -f "$POSTGRES_BACKUP" ]; then
+    echo "  → Checking if database needs restoration..."
+    
+    # Check if database already has data
+    DOC_COUNT=$(docker exec postgres psql -U postgres -t -c "SELECT COUNT(*) FROM documents;" 2>/dev/null || echo "0")
+    DOC_COUNT=$(echo "$DOC_COUNT" | tr -d '[:space:]')
+    
+    if [ "$DOC_COUNT" = "0" ] || [ "$1" = "--force" ]; then
+        echo "  → Restoring database (~2-3 min)..."
+        docker cp "$POSTGRES_BACKUP" postgres:/tmp/postgres_backup.dump
+        docker exec postgres pg_restore -U postgres -d postgres -c --if-exists /tmp/postgres_backup.dump 2>/dev/null || true
+        docker exec postgres rm /tmp/postgres_backup.dump
+        echo "  ✓ Database restored successfully"
+    else
+        echo "  ✓ Database already populated ($DOC_COUNT documents)"
+        echo "  → Use --force to restore anyway"
+    fi
+else
+    echo "  ⚠️  No PostgreSQL backup found, database will start empty"
+fi
+
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "✅ Setup complete!"

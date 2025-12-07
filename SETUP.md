@@ -1,104 +1,66 @@
 # Local Development Setup
 
-## One-Time Setup
+## Quick Start
 
 ```bash
-# Install Git LFS and download dataset
+# 1. Install Git LFS and pull large files (dataset + backup splits)
 brew install git-lfs && git lfs install && git lfs pull
 
-# Install dependencies
-poetry install && cd backend/api && poetry install && cd ../.. && cd frontend && npm install && cd ..
-```
+# 2. Initialize storage and start Docker services (~5 min to extract)
+./scripts/setup.sh
 
-## Start Services
+# 3. Install dependencies
+poetry install && cd backend/api && poetry install && cd ../eval && poetry install && cd ../../frontend && npm install && cd ..
 
-```bash
-# Start Docker (PostgreSQL, Solr, Qdrant)
-docker-compose up -d
-
-# Import dataset (~45-60 min)
-cd scripts && poetry run python dataset2postgres.py && cd ..
-
-# Index for search (~8-10 min)
-poetry run python backend/search/index_pipeline.py --dataset "MS MARCO" --core small --batch-size 3000
-
-# Start backend (Terminal 1)
+# 4. Start backend (Terminal 1)
 npm run backend:dev
 
-# Start frontend (Terminal 2)
-cd frontend
-npm run dev
+# 5. Start frontend (Terminal 2)
+cd frontend && npm run dev
 ```
+
+## What's Included
+
+Pre-built storage backups contain:
+- **PostgreSQL**: 1.6M MS MARCO documents with metadata (4.3GB compressed)
+- **Solr**: 1.6M MS MARCO documents, BM25 indexed (5.2GB)
+- **Qdrant**: Vector embeddings with Qwen/Qwen3-Embedding-0.6B (6.3GB)
 
 ## Access
 
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:8000/docs
-- Solr: http://localhost:8983
+- Solr: http://localhost:8983/solr/
 - Qdrant: http://localhost:6333/dashboard
 
-## Optional: Vector Search
+## Run Indexing (Optional)
 
+If you need to rebuild indexes from scratch:
+
+### Solr (BM25 Lexical Search)
 ```bash
-# Generate embeddings (500h+ on m4pro) hours on CPU), requires beefy GPU to run 8B model localy. 
-cd backend/embeddings && pipenv install && pipenv run python ingest.py --dataset "MS MARCO" --batch-size 100
+# Import dataset to PostgreSQL (~45-60 min)
+cd scripts && poetry run python dataset2postgres.py && cd ..
 
-# There is also the option to run remote embeddings using openrouter. For this there is another script for this to run one needs to fill all needed vars, like in the given .env.example. There is an openrouter api key needed with sufficient balance ($250 for full job)
-cd backend/embeddings && pipenv install && pipenv run python embedding_ingestion_openrouter.py --dataset "MS MARCO" --batch-size 100
-
-# Install Ollama for query embeddings
-curl -fsSL https://ollama.com/install.sh | sh && ollama pull qwen3-embedding:8b
-
-# on mac
-brew install ollama
-brew services start ollama
-ollama pull qwen3-embedding:8b
+# Index documents in Solr (~8-10 min)
+poetry run python backend/search/index_pipeline.py --dataset "MS MARCO" --core small --batch-size 3000
 ```
 
-## Troubleshooting
-
+### Qdrant (Vector Embeddings)
 ```bash
-# Restart Docker
-docker-compose down && docker-compose up -d
+# Local embedding generation (500h+ on CPU, requires GPU recommended)
+cd backend/embeddings && pipenv install
+pipenv run python ingest.py --dataset "MS MARCO" --batch-size 100
 
-# Resume import (auto-resumes from checkpoint)
-cd scripts && poetry run python dataset2postgres.py
-
-# Verify database
-docker exec -it rag-with-llms-trec-2025-information-retrieval-postgres-1 psql -U postgres -d rag_db -c "SELECT COUNT(*) FROM documents;"
+# OR remote via OpenRouter ($250 for full dataset, requires API key in .env)
+pipenv run python embedding_ingestion_openrouter.py --dataset "MS MARCO" --batch-size 100
 ```
 
-## Troubleshooting
-
-### Docker Services Not Starting
+## Run Evaluations
 
 ```bash
-# Stop and remove all containers and volumes
-docker-compose down -v
-
-# Restart fresh
-docker-compose up -d
-```
-
-### Dataset Import Fails
-
-Check PostgreSQL is running:
-```bash
-docker logs postgres
-```
-
-Resume import (script automatically resumes from last checkpoint):
-```bash
-cd scripts
-poetry run python dataset2postgres.py
-```
-
-### Solr Indexing Fails
-
-Check Solr is running:
-```bash
-docker logs solr-multiple-cores
-curl http://localhost:8983/solr/admin/cores?action=STATUS
+cd backend/eval
+poetry run eval-cli run trec-dl-23
 ```
 
 
