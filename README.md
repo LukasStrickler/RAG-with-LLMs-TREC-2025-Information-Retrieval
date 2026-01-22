@@ -10,7 +10,7 @@
 ## Project Snapshot
 - Monorepo with clearly separated services for API, embeddings, evaluation, and frontend.
 
-### ✅ Implemented Components
+### Components
 - **Evaluation CLI:** Fully functional CLI with topic loading, run generation, scoring, and benchmarking. Supports all TREC evaluation workflows.
 - **Retrieval API:** FastAPI service with `/api/v1/retrieve` and `/api/v1/metadata` endpoints. Connected to Solr (lexical) and Qdrant (vector) via SSH tunnel.
 - **Corpus Analysis:** Jupyter notebook for analyzing qrels data to identify mandatory documents required for evaluation and understand document distribution patterns.
@@ -20,32 +20,25 @@
   - **Lexical retrieval:** Solr adapter implemented.
   - **Vector retrieval:** Qdrant adapter implemented.
   - **Hybrid retrieval:** Fusion engine implemented.
-
-### 🔌 Next Steps: Plug in Retrieval Services
-The API infrastructure is ready; the following are implemented but need data ingestion to be fully operational:
-
-### 📋 Planned Components
 - **Embeddings ingestion:** CLI workers for chunking (seed=42, overlap=50, window=512) and vector generation.
 - **Metadata store:** Postgres schema for dataset specs, chunking configs, and index registry.
 - **Keyword/BM25 index:** Inverted index for term-based matching.
 - **Vector store:** ANN index for semantic retrieval.
-- **Frontend:** Next.js + shadcn/ui + Convex migration (current Deno prototype available).
+- **Frontend:** Next.js + shadcn/ui + current Deno prototype.
 
 ## Repository Layout
 ```text
 /                       
-├─ analysis/          # ✅ Qrels essential documents analysis (Jupyter notebooks)
+├─ analysis/          # Qrels essential documents analysis (Jupyter notebooks)
 ├─ backend/
-│  ├─ api/            # ✅ FastAPI service (endpoints implemented, ready for retrieval services)
-│  ├─ embeddings/     # 📋 Planned ingestion + embedding workers (Poetry project)
-│  └─ eval/           # ✅ Evaluation CLI + TREC tooling (fully implemented)
-├─ frontend/          # 📋 Deno prototype (Next.js migration planned)
-├─ shared/            # ✅ Pydantic models + enums shared across services
-├─ scripts/           # ✅ Automation (deps update, UML generation)
-└─ .docs/             # ✅ Setup guides, API docs, UML, KPIs, meeting notes
+│  ├─ api/            # FastAPI service (endpoints implemented, ready for retrieval services)
+│  ├─ embeddings/     # Planned ingestion + embedding workers (Poetry project)
+│  └─ eval/           # Evaluation CLI + TREC tooling (fully implemented)
+├─ frontend/          # Deno prototype (Next.js migration planned)
+├─ shared/            # Pydantic models + enums shared across services
+├─ scripts/           # Automation (deps update, UML generation)
+└─ .docs/             # Setup guides, API docs, UML, KPIs, meeting notes
 ```
-
-**Legend:** ✅ Implemented | 🔌 Ready for integration | 📋 Planned | 🔄 In progress
 
 ## Workflow & Data Pipeline
 
@@ -111,33 +104,33 @@ Key model categories:
 - **Usage:** Default benchmark is rag23. Override with flags: `npm run benchmark:lexical -- --24`
 
 
-### 2. Build Keyword Index 📋
+### 2. Build Keyword Index
 - **Planned:** Takes a `DatasetSpec` and produces a BM25 search index.
 - **Future work:** Persist build manifests (commit, seed, config) and register resulting `IndexTarget`.
 
-### 3. Ingestion Pipeline (Chunk + Embed) 📋
+### 3. Ingestion Pipeline (Chunk + Embed)
 - **Planned:** Chunk documents, generate embeddings, and emit vector-friendly manifests.
 - **Design:** Records `DatasetSpec` and `ChunkingSpec` used for the run to keep downstream pipeline reproducible.
 
-### 4. Keyword Index Store 📋
+### 4. Keyword Index Store
 - **Planned:** Holds the published BM25 index described by an `IndexTarget`.
 - **Integration:** Retrieval API will connect via an adapter for lexical ranking (adapter interface ready).
 
-### 5. Vector Store 📋
+### 5. Vector Store
 - **Planned:** Stores vectors, metadata, and ANN configuration referenced by an `IndexTarget`.
 - **Purpose:** Enables semantic retrieval and hybrid fusion (adapter interface ready).
 
-### 6. Metadata Store 📋
+### 6. Metadata Store
 - **Planned:** Postgres schema storing `DatasetSpec`, `ChunkingSpec`, and index registry rows.
 - **API:** Backend endpoints (`/api/v1/metadata`) are implemented and will read from here once the store is built.
 
-### 7. Retrieval API (Lexical / Vector / Hybrid) ✅
+### 7. Retrieval API (Lexical / Vector / Hybrid)
 - **Status:** FastAPI endpoints implemented and functional.
 - **Current:** Connected to real Solr and Qdrant instances via SSH tunnel.
 - **Next:** Ingest data into indexes.
 - **Ready for:** Integration with keyword index, vector store, and metadata store once they're implemented.
 
-### 8. Evaluation & Benchmarking ✅
+### 8. Evaluation & Benchmarking
 - **Status:** Fully implemented and production-ready.
 - **Capabilities:** Issues batch `RetrievalRequest`s, compares modes, computes all TREC metrics (nDCG, MAP, MRR, Recall, HitRate).
 - **Integration:** Works with `trec_eval` binary and provides comprehensive KPI analysis.
@@ -145,7 +138,7 @@ Key model categories:
 - **Output Files:** Generates TREC run files (`.tsv`), dataset info files (`_dataset_info.json`), and comprehensive reports (`_report.json`).
 - **See:** [`backend/eval/README.md`](backend/eval/README.md) for complete documentation.
 
-### 9. Chat UI (RAG Assistant) 📋
+### 9. Chat UI (RAG Assistant)
 - **Status:** Planned NextJS/Deno prototype.
 - **Functionality:** Calls the Retrieval API and composes LLM answers with retrieved context.
 - **Features:** Displays sources/citations for transparency; useful for qualitative checks.
